@@ -9,11 +9,6 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
-    # Set default directory where we wil run the steps below
-    defaults:
-      run:
-        working-directory: smart-contracts
-
     steps:
       # 1. Checkout repository code
       - name: Checkout code
