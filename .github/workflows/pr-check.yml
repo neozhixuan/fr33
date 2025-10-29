@@ -4,16 +4,9 @@ name: CI Check for PRs
 on:
   pull_request:
     branches: [main]
-
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-
-    # Set default directory where we wil run the steps below
-    defaults:
-      run:
-        working-directory: smart-contracts
-
     steps:
       # 1. Checkout repository code
       - name: Checkout code
@@ -26,17 +19,14 @@ jobs:
           node-version: "22"
           cache: "npm" # Cache NPM dependencies
 
-      # 3. Install dependencies
+      # 3. Install dependencies (handles all workspaces)
       - name: Install Dependencies
-        run: npm ci # Using 'npm ci' is recommended for CI as it uses the package-lock.json
+        run: npm ci
 
-      # 4. Run linters
-      # - not set up yet
+      # 4. Build all workspaces
+      - name: Build All Projects
+        run: npm run build
 
-      # 5. Compile smart contracts
-      - name: Compile Smart Contracts
-        run: npx hardhat compile
-
-      # 6. Run tests
-      - name: Run Tests
-        run: npx hardhat test
+      # 5. Test all workspaces
+      - name: Test All Projects
+        run: npm run test

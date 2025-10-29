@@ -1,0 +1,39 @@
+{
+  "name": "fr33",
+  "version": "1.0.0",
+  "description": "A blueprint for the first trust-minimised, compliance-aware online marketplace for freelance service payments in Singapore.",
+  "private": true,
+  "workspaces": [
+    "smart-contracts",
+    "frontend",
+    "issuer-service"
+  ],
+  "scripts": {
+    "build": "npm run build:smart-contracts && npm run build:frontend && npm run build:issuer-service",
+    "build:smart-contracts": "cd smart-contracts && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "build:issuer-service": "cd issuer-service && npm run build",
+    "test": "npm run test:smart-contracts && npm run test:frontend && npm run test:issuer-service",
+    "test:smart-contracts": "cd smart-contracts && npm run test",
+    "test:frontend": "cd frontend && npm run test",
+    "test:issuer-service": "cd issuer-service && npm run test",
+    "dev:smart-contracts": "cd smart-contracts && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:issuer-service": "cd issuer-service && npm run dev",
+    "lint": "npm run lint:smart-contracts && npm run lint:frontend && npm run lint:issuer-service",
+    "lint:smart-contracts": "cd smart-contracts && npm run lint",
+    "lint:frontend": "cd frontend && npm run lint",
+    "lint:issuer-service": "cd issuer-service && npm run lint"
+  },
+  "keywords": [
+    "blockchain",
+    "web3",
+    "smart-contracts",
+    "fullstack"
+  ],
+  "author": "Neo Zhi Xuan",
+  "license": "MIT",
+  "devDependencies": {
+    "hardhat": "^3.0.9"
+  }
+}
