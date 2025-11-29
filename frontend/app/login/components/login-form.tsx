@@ -1,24 +1,30 @@
 'use client';
 
 import { useActionState } from 'react';
-import { authenticate } from '@/app/lib/actions';
-import Button from "@/app/ui/Button"
+import { authenticateAction } from '@/lib/actions';
+import Button from "@/ui/Button"
 import { useSearchParams } from 'next/navigation';
 
 export function LoginForm() {
     const searchParams = useSearchParams();
     const callbackUrl = searchParams.get('callbackUrl') || '/job-portal';
-    const [errorMessage, formAction, isPending] = useActionState(
-        authenticate,
+
+    const authorisationError = searchParams.get("error");
+    const from = searchParams.get("from");
+    const authorisationErrorMessage = authorisationError === "unauthorised" ?
+        `Please sign in to access ${from}.` : "Unknown error. Try again";
+
+    // Creates a component state that is updated when a form action is invoked. Pass in an action and an initial state
+    const [loginErrorMessage, loginAction, isLoginPending] = useActionState(
+        authenticateAction,
         undefined,
     );
 
-    const handleSubmit = () => {
-        console.log("test")
-    }
-
     return (
-        <form action={formAction} className="space-y-3">
+        <form action={loginAction} className="space-y-3 position-relative">
+            {authorisationErrorMessage && (
+                <div role="alert" className="text-red-500 text-sm position-absolute top-0 left-0 w-full">{authorisationErrorMessage}</div>
+            )}
             <div className="w-full flex flex-col gap-5">
                 <div className="relative">
                     <label
@@ -56,21 +62,22 @@ export function LoginForm() {
                 </div>
 
                 <div
-                    className="flex h-8 items-end space-x-1"
+                    className="flex justify-center h-8 items-end space-x-1"
                     aria-live="polite"
                     aria-atomic="true"
                 >
+                    {/* Hidden input to pass redirectTo to server action */}
                     <input type="hidden" name="redirectTo" value={callbackUrl} />
-                    <Button onClick={handleSubmit} type="submit" aria-disabled={isPending}>
+                    <Button type="submit" aria-disabled={isLoginPending} disabled={isLoginPending}>
                         Log in
                     </Button>
 
-                    {errorMessage && (
-                        <>
-                            <p>{errorMessage}</p>
-                        </>
-                    )}
                 </div>
+                {loginErrorMessage && (
+                    <>
+                        <p>{loginErrorMessage}</p>
+                    </>
+                )}
             </div>
         </form>
     )

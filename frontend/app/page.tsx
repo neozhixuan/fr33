@@ -1,17 +1,23 @@
 
 import NextLink from "next/link";
-import Button from "./ui/Button";
+import Button from "../ui/Button";
+import CentralContainer from "@/layout/CentralContainer";
 
 export default function Home() {
   return (
-    <div className="flex flex-col items-center justify-center w-full h-full gap-5">
+    <CentralContainer>
       <h1>fr33</h1>
       <p>Decentralised B2C payments infrastructure for freelancers</p>
-      <NextLink href={'/register'}>
+      <NextLink href={'/login'}>
         <Button>
-          Register
+          Login
         </Button>
       </NextLink>
-    </div>
+      <NextLink href={'/job-portal'}>
+        <Button>
+          Enter the portal
+        </Button>
+      </NextLink>
+    </CentralContainer>
   );
 }

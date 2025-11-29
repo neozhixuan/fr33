@@ -1,11 +1,28 @@
-import Link from "next/link";
+import { auth, signOut } from "../../lib/auth";
+import CentralContainer from "../../layout/CentralContainer";
+import Button from "@/ui/Button";
+import { redirect } from "next/navigation";
 
-export default function JobPortal() {
+export default async function JobPortal() {
+    const session = await auth();
+    if (!session?.user) {
+        redirect('/login');
+    }
+
     return (
-        <div className="flex flex-col items-center justify-center w-full h-full gap-5">
+        <CentralContainer>
             <p>Job portal</p>
-            <Link href={'/'}>Back to home</Link>
-
-        </div>
+            <Button href={'/'}>Back to home</Button>
+            <form action={logoutAction}>
+                <Button type="submit">Logout</Button>
+            </form>
+        </CentralContainer>
     )
+}
+
+async function logoutAction() {
+    'use server'
+
+    await signOut();
+    redirect('/');
 }

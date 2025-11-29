@@ -1,15 +1,11 @@
-import Link from "next/link";
-import { LoginForm } from "./components"
-import { Suspense } from "react";
+import Button from "@/ui/Button";
+import CentralContainer from "../../layout/CentralContainer";
 
-export default function Register() {
+export default function RegisterPage() {
     return (
-        <div className="flex flex-col items-center justify-center w-full h-full gap-5">
-            <p>Registration</p>
-            <Link href={'/'}>Back to home</Link>
-            <Suspense fallback={<div>Loading...</div>}>
-                <LoginForm />
-            </Suspense>
-        </div>
+        <CentralContainer>
+            <p>Register</p>
+            <Button href={'/'}>Back to home</Button>
+        </CentralContainer>
     )
 }

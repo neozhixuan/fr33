@@ -1,5 +1,5 @@
 import NextAuth from "next-auth";
-import { authConfig } from "./auth.config";
+import { authConfig } from "./auth";
 
 // Protected routes will not even start rendering until the Proxy verifies the authentication
 const auth = NextAuth(authConfig).auth;
