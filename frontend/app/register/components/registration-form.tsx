@@ -1,36 +1,40 @@
 'use client';
 
-import { useActionState } from 'react';
-import { authenticateAction } from '@/lib/actions';
-import Button from "@/ui/Button"
-import { useSearchParams } from 'next/navigation';
+import { registrationAction } from "@/lib/actions";
+import Button from "@/ui/Button";
+import { useActionState } from "react";
 
-export function LoginForm() {
-    const callbackUrl = '/job-portal';
+export function RegistrationForm() {
+    const callbackUrl = '/next-step';
 
-    const searchParams = useSearchParams();
-    const authorisationError = searchParams.get("error");
-    const from = searchParams.get("from");
-    // TODO: move to constants
-    const ERROR_MSG_MAP: Record<string, string> = {
-        "unauthorised": `Please sign in to access ${from}.`,
-        "default": `Unknown error: ${authorisationError}. Try again`,
-    }
-    const authorisationErrorMessage: string = authorisationError ?
-        ERROR_MSG_MAP[authorisationError] ?? ERROR_MSG_MAP["default"] : "" // Note: Accessing a missing key returns undefined
-
-    // Creates a component state that is updated when a form action is invoked. Pass in an action and an initial state
-    const [loginErrorMessage, loginAction, isLoginPending] = useActionState(
-        authenticateAction,
+    const [registrationErrorMessage, registerAction, isRegistrationPending] = useActionState(
+        registrationAction,
         undefined,
     );
 
     return (
-        <form action={loginAction} className="space-y-3 position-relative w-1/3">
-            {authorisationErrorMessage && (
-                <div role="alert" className="text-red-500 text-sm position-absolute top-0 left-0 w-full">{authorisationErrorMessage}</div>
+        <form action={registerAction} className="space-y-3 position-relative  w-1/3">
+            {registrationErrorMessage && (
+                <div role="alert" className="text-red-500 text-sm position-absolute top-0 left-0 w-full">{registrationErrorMessage}</div>
             )}
             <div className="w-full flex flex-col gap-5">
+                <div className="relative">
+                    <label
+                        className="mb-3 mt-5"
+                        htmlFor="name"
+                    >
+                        Name
+                    </label>
+
+                    <input
+                        className="peer block w-full rounded-md border border-gray-200 py-[9px] text-sm outline-2"
+                        id="name"
+                        type="text"
+                        name="name"
+                        placeholder="Enter your name"
+                        required
+                    />
+                </div>
                 <div className="relative">
                     <label
                         className="mb-3 mt-5"
@@ -73,18 +77,18 @@ export function LoginForm() {
                 >
                     {/* Hidden input to pass redirectTo to server action */}
                     <input type="hidden" name="redirectTo" value={callbackUrl} />
-                    <Button type="submit" aria-disabled={isLoginPending} disabled={isLoginPending}>
-                        Log in
+                    <Button type="submit" aria-disabled={isRegistrationPending} disabled={isRegistrationPending}>
+                        Register
                     </Button>
 
                 </div>
-                {loginErrorMessage && (
+                {registrationErrorMessage && (
                     <>
-                        <p>{loginErrorMessage}</p>
+                        <p>{registrationErrorMessage}</p>
                     </>
                 )}
             </div>
         </form>
-    )
 
+    )
 }

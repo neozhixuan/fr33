@@ -3,28 +3,9 @@ import Credentials from "next-auth/providers/credentials";
 
 import { z } from "zod";
 import type { User } from "@/lib/definitions";
+import bcrypt from "bcrypt";
 
-// import bcrypt from "bcrypt";
-// import postgres from "postgres";
-
-// const sql = postgres(process.env.POSTGRES_URL!, { ssl: "require" });
-
-const mockUser: User = {
-  id: "1",
-  name: "Mock User",
-  email: "user@example.com",
-  password: "password123",
-};
-
-// async function getUser(email: string): Promise<User | undefined> {
-//   try {
-//     const user = await sql<User[]>`SELECT * FROM users WHERE email=${email}`;
-//     return user[0];
-//   } catch (error) {
-//     console.error("Failed to fetch user:", error);
-//     throw new Error("Failed to fetch user.");
-//   }
-// }
+import { getUserByEmail } from "@/model/user";
 
 export const authConfig = {
   pages: {
@@ -63,9 +44,9 @@ export const { auth, signIn, signOut } = NextAuth({
   ],
 });
 
-const getUserFromCredentials = (
+async function getUserFromCredentials(
   credentials: Partial<Record<string, unknown>>
-): User | null => {
+): Promise<User | null> {
   const parsedCredentials = z
     .object({
       email: z.string().email(),
@@ -76,11 +57,20 @@ const getUserFromCredentials = (
   if (parsedCredentials.success) {
     const { email, password } = parsedCredentials.data;
 
-    if (email === mockUser.email && password === mockUser.password) {
-      return mockUser;
+    const user = await getUserByEmail(email);
+    if (!user) {
+      console.error("[getUserFromCredentials] no user found with that email");
+      return null;
     }
+
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) {
+      console.error("[getUserFromCredentials] password did not match");
+      return null;
+    }
+
     console.log("[getUserFromCredentials] Credentials did not match account");
   }
 
   return null;
-};
+}
