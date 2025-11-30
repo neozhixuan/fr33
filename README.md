@@ -5,17 +5,22 @@ A blueprint for the first trust-minimised, compliance-aware online marketplace f
 ## Setup
 
 ### Prerequisites:
+
 1. Node v22.20.0
+
 ```sh
 # For macOS or Linux users
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
 nvm install 22
 nvm use 22
 ```
+
 2. Hardhat v3 with Ethers.js integration and Mocha testing framework
+
 ```sh
 npm install --save-dev hardhat
 ```
+
 3. Solidity 0.8.28
 
 ### Steps to Set Up the Project:
@@ -46,7 +51,15 @@ npm run build
      PRIVATE_KEY=your_private_key
      ```
 
-4. Run everything
+4. Set up the database:
+
+   - Create a PostgreSQL database.
+   - Update the `.env` file with your database connection string:
+     ```
+     POSTGRES_URL=your_postgres_connection_string
+     ```
+
+5. Run everything
 
 ```sh
 # Test everything
@@ -54,6 +67,20 @@ npm run test
 
 # Work on specific parts
 npm run dev:frontend
+```
+
+## Database Setup
+
+Database schema:
+
+```sql
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL DEFAULT '',
+  email TEXT NOT NULL DEFAULT '',
+  password TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW();
+);
 ```
 
 ## Debugging issues
