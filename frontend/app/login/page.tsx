@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import Button from "../../ui/Button";
 import CentralContainer from "../../layout/CentralContainer";
 
-export default function LoginPage() {
+export default async function LoginPage() {
     return (
         <CentralContainer>
             <p>Login</p>
