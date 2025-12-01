@@ -1,6 +1,6 @@
 "use server";
 
-import { signIn } from "@/lib/auth";
+import { signIn } from "@/server/auth";
 import { createUserAfterPasswordHash } from "@/model/user";
 import { AuthError } from "next-auth";
 
@@ -41,10 +41,6 @@ export async function registrationAction(
   } catch (error) {
     // Return err message
     if (error instanceof AuthError) {
-      if (error.type === "CredentialsSignin") {
-        return "Invalid credentials, err: " + error.message;
-      }
-
       return "Something went wrong, err: " + (error.message || "Unknown error");
     }
     // Non-auth error

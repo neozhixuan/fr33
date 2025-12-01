@@ -1,12 +1,15 @@
-import { auth, signOut } from "../../lib/auth";
-import CentralContainer from "../../layout/CentralContainer";
+import { auth, signOut } from "@/server/auth";
+import CentralContainer from "@/layout/CentralContainer";
 import Button from "@/ui/Button";
 import { redirect } from "next/navigation";
 
+const UNAUTHORISED_REDIRECT_URL = '/login?error=unauthorised&from=/job-portal';
+
 export default async function JobPortal() {
+    // Server component (runs on Node runtime) - Block SSR if auth doesn't pass
     const session = await auth();
     if (!session?.user) {
-        redirect('/login');
+        redirect(UNAUTHORISED_REDIRECT_URL);
     }
 
     return (
@@ -23,6 +26,5 @@ export default async function JobPortal() {
 async function logoutAction() {
     'use server'
 
-    await signOut();
-    redirect('/');
+    await signOut({ redirectTo: '/' });
 }
