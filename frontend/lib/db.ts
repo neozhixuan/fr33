@@ -1,10 +1,6 @@
 import postgres from "postgres";
-
+import { DB_CONNECTION_STRING, DB_CONNECTION_OPTIONS } from "./constants";
 type PostgreSql = ReturnType<typeof postgres>; // TODO: move to types.ts
-
-// TODO: set ssl in production
-const CONNECTION_STRING = process.env.POSTGRES_URL!;
-const CONNECTION_OPTIONS = undefined; // Asserts read-only property, and enforces that ssl must be "require"
 
 // Cache the client across hot reloads in dev (singleton)
 declare global {
@@ -17,7 +13,7 @@ const initialiseDB = (): PostgreSql => {
   }
 
   try {
-    const sql = postgres(CONNECTION_STRING, CONNECTION_OPTIONS);
+    const sql = postgres(DB_CONNECTION_STRING, DB_CONNECTION_OPTIONS);
     return sql;
   } catch (error) {
     console.error("[initialiseDB] Failed to initialise DB, check env", error);

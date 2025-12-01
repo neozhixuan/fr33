@@ -2,8 +2,7 @@ import { auth, signOut } from "@/server/auth";
 import CentralContainer from "@/layout/CentralContainer";
 import Button from "@/ui/Button";
 import { redirect } from "next/navigation";
-
-const UNAUTHORISED_REDIRECT_URL = '/login?error=unauthorised&from=/job-portal';
+import { UNAUTHORISED_REDIRECT_URL } from "@/lib/constants";
 
 export default async function JobPortal() {
     // Server component (runs on Node runtime) - Block SSR if auth doesn't pass

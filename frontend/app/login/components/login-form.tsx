@@ -11,13 +11,12 @@ export function LoginForm() {
     const searchParams = useSearchParams();
     const authorisationError = searchParams.get("error");
     const from = searchParams.get("from");
-    // TODO: move to constants
-    const ERROR_MSG_MAP: Record<string, string> = {
+    const LOGIN_ERROR_MSG_MAP: Record<string, string> = {
         "unauthorised": `Please sign in to access ${from}.`,
         "default": `Unknown error: ${authorisationError}. Try again`,
     }
     const authorisationErrorMessage: string = authorisationError ?
-        ERROR_MSG_MAP[authorisationError] ?? ERROR_MSG_MAP["default"] : "" // Note: Accessing a missing key returns undefined
+        LOGIN_ERROR_MSG_MAP[authorisationError] ?? LOGIN_ERROR_MSG_MAP["default"] : "" // Note: Accessing a missing key returns undefined
 
     // Creates a component state that is updated when a form action is invoked. Pass in an action and an initial state
     const [loginErrorMessage, loginAction, isLoginPending] = useActionState(
