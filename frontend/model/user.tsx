@@ -30,7 +30,23 @@ export async function getUserByEmail(email: string): Promise<users | undefined> 
 
         return user;
     } catch (error) {
-        console.error("Failed to fetch user:", error);
-        throw new Error("Failed to fetch user.");
+        console.error("Failed to fetch user by email:", error);
+        throw new Error("Failed to fetch user by email.");
+    }
+}
+
+export async function updateUserRegistrationStep(email: string, registrationStep: number) {
+    if (registrationStep < 0 || registrationStep > 2) {
+        throw new Error("Invalid registration step.");
+    }
+
+    try {
+        await prisma.users.update({
+            where: { email: email },
+            data: { registration_step: registrationStep },
+        });
+    } catch (error) {
+        console.error("Failed to update user registration step, err:", error);
+        throw new Error("Failed to update user registration step, err: " + (error));
     }
 }

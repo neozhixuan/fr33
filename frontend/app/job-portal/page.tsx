@@ -2,13 +2,23 @@ import { auth, signOut } from "@/server/auth";
 import CentralContainer from "@/layout/CentralContainer";
 import Button from "@/ui/Button";
 import { redirect } from "next/navigation";
-import { UNAUTHORISED_REDIRECT_URL } from "@/lib/constants";
+import { ERROR_TYPE_MAP, getFallbackURL } from "@/lib/util";
+import { users } from "@prisma/client";
+import { getUserByEmail } from "@/model/user";
 
 export default async function JobPortal() {
     // Server component (runs on Node runtime) - Block SSR if auth doesn't pass
     const session = await auth();
     if (!session?.user) {
-        redirect(UNAUTHORISED_REDIRECT_URL);
+        redirect(getFallbackURL("job-portal", ERROR_TYPE_MAP.UNAUTHORISED));
+    }
+    let userModel: users | undefined = undefined
+    if (session && session.user && session.user.email) {
+        userModel = await getUserByEmail(session.user.email);
+    }
+    if (userModel && userModel.registration_step) {
+        const steps = ["", "one", "two", "three"]
+        redirect("/register-step-" + steps[userModel.registration_step + 1]);
     }
 
     return (

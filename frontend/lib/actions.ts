@@ -1,7 +1,10 @@
 "use server";
 
 import { signIn } from "@/server/auth";
-import { createUserAfterPasswordHash } from "@/model/user";
+import {
+  createUserAfterPasswordHash,
+  updateUserRegistrationStep,
+} from "@/model/user";
 import { AuthError } from "next-auth";
 
 export async function authenticateAction(
@@ -46,4 +49,8 @@ export async function registrationAction(
     // Non-auth error
     throw error;
   }
+}
+
+export async function completeKyc(email: string) {
+  await updateUserRegistrationStep(email, 2);
 }

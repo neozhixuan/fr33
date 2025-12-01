@@ -4,21 +4,19 @@ import { useActionState } from 'react';
 import { authenticateAction } from '@/lib/actions';
 import Button from "@/ui/Button"
 import { useSearchParams } from 'next/navigation';
+import { getLoginErrorMsg } from '@/lib/util';
 
 export function LoginForm() {
-    const callbackUrl = '/job-portal';
+    const redirectURL = "/job-portal"
 
     const searchParams = useSearchParams();
     const authorisationError = searchParams.get("error");
     const from = searchParams.get("from");
-    const LOGIN_ERROR_MSG_MAP: Record<string, string> = {
-        "unauthorised": `Please sign in to access ${from}.`,
-        "default": `Unknown error: ${authorisationError}. Try again`,
-    }
     const authorisationErrorMessage: string = authorisationError ?
-        LOGIN_ERROR_MSG_MAP[authorisationError] ?? LOGIN_ERROR_MSG_MAP["default"] : "" // Note: Accessing a missing key returns undefined
+        getLoginErrorMsg(from!, authorisationError) : "" // Note: Accessing a missing key returns undefined
 
-    // Creates a component state that is updated when a form action is invoked. Pass in an action and an initial state
+    // Creates a component state tuple with three elements: the current state, a function to update the state, and a boolean indicating if the action is pending.
+    // Pass in an action and an initial state
     const [loginErrorMessage, loginAction, isLoginPending] = useActionState(
         authenticateAction,
         undefined,
@@ -71,12 +69,12 @@ export function LoginForm() {
                     aria-atomic="true"
                 >
                     {/* Hidden input to pass redirectTo to server action */}
-                    <input type="hidden" name="redirectTo" value={callbackUrl} />
+                    <input type="hidden" name="redirectTo" value={redirectURL} />
                     <Button type="submit" aria-disabled={isLoginPending} disabled={isLoginPending}>
                         Log in
                     </Button>
-
                 </div>
+
                 {loginErrorMessage && (
                     <>
                         <p>{loginErrorMessage}</p>
