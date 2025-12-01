@@ -1,33 +1,34 @@
-import sql from "@/lib/db";
-import type { User } from "@/lib/definitions";
+import { prisma } from "@/lib/db";
+import type { users } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 export async function createUserAfterPasswordHash(username: string, email: string, password: string) {
     const hashedPassword = await bcrypt.hash(password, 10);
     try {
-        await sql`
-      INSERT INTO users (name, email, password)
-      VALUES (${username}, ${email}, ${hashedPassword})
-    `;
-
+        await prisma.users.create({
+            data: {
+                name: username,
+                email: email,
+                password: hashedPassword,
+            },
+        });
     } catch (error) {
         console.error("Failed to create user, err:", error);
         throw new Error("Failed to create user, err: " + (error));
     }
 }
 
-
-export async function getUserByEmail(email: string): Promise<User | undefined> {
+export async function getUserByEmail(email: string): Promise<users | undefined> {
     try {
-        const rows = await sql<User[]>`
-      SELECT id, name, email, password, created_at
-      FROM users
-      WHERE email = ${email}
-      LIMIT 1
-    `;
+        const user = await prisma.users.findUnique({
+            where: { email: email },
+        }) as users | null;
 
-        console.log("test:" + rows)
-        return rows[0] ?? null;
+        if (!user) {
+            return undefined;
+        }
+
+        return user;
     } catch (error) {
         console.error("Failed to fetch user:", error);
         throw new Error("Failed to fetch user.");

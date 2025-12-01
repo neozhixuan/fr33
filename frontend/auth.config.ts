@@ -3,6 +3,7 @@ import { z } from "zod";
 import bcrypt from "bcrypt";
 import { getUserByEmail } from "@/model/user";
 import type { NextAuthConfig } from "next-auth";
+import type { users } from "@prisma/client";
 
 export default {
   pages: {
@@ -22,13 +23,14 @@ export default {
         if (!parsed.success) return null;
 
         const { email, password } = parsed.data;
-        const user = await getUserByEmail(email);
+        const user: users | undefined = await getUserByEmail(email);
         if (!user) return null;
 
         const ok = await bcrypt.compare(password, user.password);
         if (!ok) return null;
 
-        return user;
+        // Custom return type to match NextAuth's requirements
+        return { ...user, id: String(user.id) };
       },
     }),
   ],
