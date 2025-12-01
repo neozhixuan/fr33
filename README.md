@@ -59,7 +59,14 @@ npm run build
      POSTGRES_URL=your_postgres_connection_string
      ```
 
-5. Run everything
+5. Set up Prisma:
+
+   - Run Prisma migrations to set up the database schema:
+     ```sh
+     npx prisma migrate dev
+     ```
+
+6. Run everything
 
 ```sh
 # Test everything
