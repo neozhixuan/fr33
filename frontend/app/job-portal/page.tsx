@@ -2,28 +2,38 @@ import { auth, signOut } from "@/server/auth";
 import CentralContainer from "@/layout/CentralContainer";
 import Button from "@/ui/Button";
 import { redirect } from "next/navigation";
-import { UNAUTHORISED_REDIRECT_URL } from "@/lib/constants";
+import { ERROR_TYPE_MAP, getFallbackURL } from "@/utils/errors";
+import { users } from "@prisma/client";
+import { getUserByEmail } from "@/model/user";
 
 export default async function JobPortal() {
-    // Server component (runs on Node runtime) - Block SSR if auth doesn't pass
-    const session = await auth();
-    if (!session?.user) {
-        redirect(UNAUTHORISED_REDIRECT_URL);
-    }
+  // Server component (runs on Node runtime) - Block SSR if auth doesn't pass
+  const session = await auth();
+  if (!session?.user) {
+    redirect(getFallbackURL("job-portal", ERROR_TYPE_MAP.UNAUTHORISED));
+  }
+  let userModel: users | undefined = undefined;
+  if (session && session.user && session.user.email) {
+    userModel = await getUserByEmail(session.user.email);
+  }
+  if (userModel && userModel.registrationStep) {
+    const steps = ["", "one", "two", "three"];
+    redirect("/register-step-" + steps[userModel.registrationStep + 1]);
+  }
 
-    return (
-        <CentralContainer>
-            <p>Job portal</p>
-            <Button href={'/'}>Back to home</Button>
-            <form action={logoutAction}>
-                <Button type="submit">Logout</Button>
-            </form>
-        </CentralContainer>
-    )
+  return (
+    <CentralContainer>
+      <p>Job portal</p>
+      <Button href={"/"}>Back to home</Button>
+      <form action={logoutAction}>
+        <Button type="submit">Logout</Button>
+      </form>
+    </CentralContainer>
+  );
 }
 
 async function logoutAction() {
-    'use server'
+  "use server";
 
-    await signOut({ redirectTo: '/' });
+  await signOut({ redirectTo: "/" });
 }
