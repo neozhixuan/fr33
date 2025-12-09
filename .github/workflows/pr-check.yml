@@ -1,6 +1,5 @@
 name: CI Check for PRs
 
-# This workflow runs on PRs to 'main'
 on:
   pull_request:
     branches: [main]
@@ -8,25 +7,23 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      # 1. Checkout repository code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Set up Node.js
       - name: Setup Node.js v22
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: "npm" # Cache NPM dependencies
 
-      # 3. Install dependencies (handles all workspaces)
-      - name: Install Dependencies
+      - name: Install Dependencies Across Workspaces
         run: npm ci
 
-      # 4. Build all workspaces
+      - name: Setup Prisma in FE
+        run: npm run prisma-setup
+
       - name: Build All Projects
         run: npm run build
 
-      # 5. Test all workspaces
       - name: Test All Projects
         run: npm run test

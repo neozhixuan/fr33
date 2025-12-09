@@ -23,7 +23,8 @@
     "lint": "npm run lint:smart-contracts && npm run lint:frontend && npm run lint:issuer-service",
     "lint:smart-contracts": "cd smart-contracts && npm run lint",
     "lint:frontend": "cd frontend && npm run lint",
-    "lint:issuer-service": "cd issuer-service && npm run lint"
+    "lint:issuer-service": "cd issuer-service && npm run lint",
+    "prisma-setup": "cd frontend && npx prisma generate && npx prisma migrate dev"
   },
   "keywords": [
     "blockchain",

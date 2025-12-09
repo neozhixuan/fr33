@@ -173,3 +173,24 @@ Desktop.ini
 
 # Misc
 *.pem
+
+###############################################################################
+# Prisma
+###############################################################################
+
+# Database files (SQLite)
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Generated Prisma Client (usually in node_modules, but just in case)
+/frontend/node_modules/.prisma/
+/frontend/generated/
+
+# Prisma Studio artifacts
+.prisma/
+
+# Local database seeds/test data (if you create these)
+/frontend/prisma/dev.db
+/frontend/prisma/test.db
