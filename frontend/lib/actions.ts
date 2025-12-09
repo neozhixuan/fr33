@@ -3,9 +3,11 @@
 import { signIn } from "@/server/auth";
 import {
   createUserAfterPasswordHash,
-  updateUserRegistrationStep,
+  updateUserKYCInformation,
 } from "@/model/user";
 import { AuthError } from "next-auth";
+import { redirect } from "next/navigation";
+import { KycDataDTO } from "@/types";
 
 export async function authenticateAction(
   prevState: string | undefined,
@@ -34,13 +36,13 @@ export async function registrationAction(
   try {
     const email = formData.get("email")?.toString() ?? "";
     const password = formData.get("password")?.toString() ?? "";
-    const name = formData.get("name")?.toString() ?? "";
 
-    if (!email || !password || !name) {
+    if (!email || !password) {
       return "Error: Please fill in all fields.";
     }
 
-    await createUserAfterPasswordHash(name, email, password);
+    await createUserAfterPasswordHash(email, password);
+    redirect("/job-portal");
   } catch (error) {
     // Return err message
     if (error instanceof AuthError) {
@@ -51,6 +53,11 @@ export async function registrationAction(
   }
 }
 
-export async function completeKyc(email: string) {
-  await updateUserRegistrationStep(email, 2);
+export async function completeKyc(email: string, kycDataDTO: KycDataDTO) {
+  try {
+    await updateUserKYCInformation(email, kycDataDTO);
+  } catch (error) {
+    console.error("Failed to complete KYC, err: ", error);
+    throw new Error("Failed to complete KYC, err: " + error);
+  }
 }
