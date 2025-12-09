@@ -20,7 +20,7 @@ jobs:
         run: npm ci
 
       - name: Setup Prisma in FE
-        run: npm run prisma-setup
+        run: npm run prisma-setup:frontend
 
       - name: Build All Projects
         run: npm run build
