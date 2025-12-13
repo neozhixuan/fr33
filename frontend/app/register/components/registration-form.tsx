@@ -1,6 +1,6 @@
 "use client";
 
-import { registrationAction } from "@/lib/actions";
+import { registrationAction } from "@/lib/authActions";
 import Button from "@/ui/Button";
 import { useActionState } from "react";
 

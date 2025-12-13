@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { authenticateAction } from "@/lib/actions";
+import { authenticateAction } from "@/lib/authActions";
 import Button from "@/ui/Button";
 import { useSearchParams } from "next/navigation";
 import { getLoginErrorMsg } from "@/utils/errors";

@@ -8,26 +8,20 @@ datasource db {
 }
 
 model users {
-  id       Int    @id @default(autoincrement())
-  email    String @unique
-  password String
-
-  // KYC Information
-  kycVerified  Boolean   @default(false) @map("kyc_verified")
-  fullName     String?   @map("full_name")
-  idType       String?   @map("id_type")
-  idHash       String?   @map("id_hash") // Hashed ID, never store raw
-  dob          DateTime? @db.Date // Date of birth
-  kycTimestamp DateTime? @map("kyc_timestamp") @db.Timestamptz(6)
-
-  // Blockchain Wallet (ERC-4337 Smart Account)
-  walletAddress    String? @unique @map("wallet_address") // Generated after KYC
-  encryptedPrivKey String? @map("encrypted_priv_key") // Encrypted private key
-
-  // Metadata
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  registrationStep Int      @default(1) @map("registration_step") @db.SmallInt
+  id               Int       @id @default(autoincrement())
+  email            String    @unique
+  password         String
+  kycVerified      Boolean   @default(false) @map("kyc_verified")
+  fullName         String?   @map("full_name")
+  idType           String?   @map("id_type")
+  idHash           String?   @map("id_hash")
+  dob              DateTime? @db.Date
+  kycTimestamp     DateTime? @map("kyc_timestamp") @db.Timestamptz(6)
+  walletAddress    String?   @unique @map("wallet_address")
+  encryptedPrivKey String?   @map("encrypted_priv_key")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  registrationStep Int       @default(1) @map("registration_step") @db.SmallInt
 
   @@map("users")
 }

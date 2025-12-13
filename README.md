@@ -98,3 +98,11 @@ You can remove `node_modules` and reinstall necessary libraries in case of confl
 rm -rf node_modules package-lock.json
 npm install
 ```
+
+## Notes
+
+The following libraries primarily work on React 18 instead of 19, and are installed using legacy-peer-deps:
+
+- @alchemy/aa-core
+- @alchemy/aa-alchemy
+- viem

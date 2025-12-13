@@ -17,8 +17,14 @@ export default async function JobPortal() {
     userModel = await getUserByEmail(session.user.email);
   }
   if (userModel && userModel.registrationStep) {
-    const steps = ["", "one", "two", "three"];
-    redirect("/register-step-" + steps[userModel.registrationStep + 1]);
+    const steps = [
+      "/",
+      "/",
+      "/register-step-two",
+      "/register-step-three",
+      "/job-portal",
+    ];
+    redirect(steps[userModel.registrationStep]);
   }
 
   return (
