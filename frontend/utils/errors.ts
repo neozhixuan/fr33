@@ -1,9 +1,11 @@
+// Redirect URL for auth failure
 export const UNAUTHORISED_REDIRECT_URL = "/login";
 
 export const getFallbackURL = (from: string, error: string) => {
   return `${UNAUTHORISED_REDIRECT_URL}?from=${from}&error=${error}`;
 };
 
+// Error message upon auth failure
 export const ERROR_TYPE_MAP = {
   UNAUTHORISED: "unauthorised",
   DEFAULT: "default",

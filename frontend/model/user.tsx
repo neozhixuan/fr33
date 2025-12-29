@@ -3,6 +3,9 @@ import { KycDataDTO } from "@/types";
 import type { users } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
+/**
+ * Creates a row for the user in DB, with hashed password
+ */
 export async function createUserAfterPasswordHash(
   email: string,
   password: string
@@ -21,6 +24,9 @@ export async function createUserAfterPasswordHash(
   }
 }
 
+/**
+ * Use the unique key `email` to fetch user
+ */
 export async function getUserByEmail(
   email: string
 ): Promise<users | undefined> {
@@ -40,6 +46,9 @@ export async function getUserByEmail(
   }
 }
 
+/**
+ * Updates user's KYC information
+ */
 export async function updateUserKYCInformation(
   email: string,
   kycDataDTO: KycDataDTO
@@ -63,11 +72,36 @@ export async function updateUserKYCInformation(
         idHash: hashedID,
         dob: dob,
         kycTimestamp: kycDataDTO.kycTimestamp,
-        registrationStep: 3,
       },
     });
   } catch (error) {
     console.error("Failed to update user's KYC information, err:", error);
     throw new Error("Failed to update user's KYC information, err: " + error);
+  }
+}
+
+/**
+ * Updates user's wallet information after smart account creation
+ * Stores the wallet address and encrypted private key
+ */
+export async function updateUserWalletInformation(
+  email: string,
+  walletAddress: string,
+  encryptedPrivKey: string
+) {
+  try {
+    await prisma.users.update({
+      where: { email: email },
+      data: {
+        walletAddress,
+        encryptedPrivKey,
+        registrationStep: 2,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to update user's wallet information, err:", error);
+    throw new Error(
+      "Failed to update user's wallet information, err: " + error
+    );
   }
 }
