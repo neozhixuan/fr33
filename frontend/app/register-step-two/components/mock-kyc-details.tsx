@@ -1,13 +1,16 @@
 "use client";
 
-import { completeKyc } from "@/lib/actions";
+import { completeKyc, createSmartAccountForUser } from "@/lib/authActions";
 import { KycDataDTO } from "@/types";
 import Button from "@/ui/Button";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function MockKYCDetails({ userEmail }: { userEmail: string }) {
+  const router = useRouter();
   const [isShowUserDetails, setIsShowUserDetails] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const userData: KycDataDTO = {
     fullName: "Jake",
@@ -18,14 +21,40 @@ export default function MockKYCDetails({ userEmail }: { userEmail: string }) {
     kycTimestamp: new Date().toISOString(),
   };
 
-  const continueToStepThree = async () => {
-    await completeKyc(userEmail, userData); // Handle server action in actions.tsx
-    redirect("register-step-three");
+  const createWalletWithKYCData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Step 1: Complete KYC verification
+      await completeKyc(userEmail, userData);
+
+      // Step 2: Create smart account wallet
+      const smartAccountDetails = await createSmartAccountForUser(userEmail);
+      if (!smartAccountDetails) {
+        throw new Error("Smart account creation failed");
+      }
+
+      // Step 3: Navigate to final step
+      router.push("/register-step-three");
+    } catch (err) {
+      console.error("Failed to complete registration:", err);
+      setError(
+        err instanceof Error
+          ? `Failed to complete registration: ${err.message}`
+          : "An unknown error occurred"
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <>
-      <Button onClick={() => setIsShowUserDetails(true)}>Mock KYC Check</Button>
+      <Button onClick={() => setIsShowUserDetails(true)} disabled={isLoading}>
+        Mock KYC Check
+      </Button>
+
       {isShowUserDetails && (
         <div>
           <p>Mock KYC Check Result:</p>
@@ -37,7 +66,15 @@ export default function MockKYCDetails({ userEmail }: { userEmail: string }) {
             <li>Date of Birth: {userData.dob}</li>
             <li>KYC Timestamp: {userData.kycTimestamp}</li>
           </ul>
-          <Button onClick={continueToStepThree}>Continue to step 3</Button>
+          <Button onClick={createWalletWithKYCData} disabled={isLoading}>
+            {isLoading ? "Creating wallet..." : "Continue to step 3"}
+          </Button>
+        </div>
+      )}
+
+      {error && (
+        <div className="text-red-500 p-4 border border-red-500 rounded">
+          <p>Error: {error}</p>
         </div>
       )}
     </>

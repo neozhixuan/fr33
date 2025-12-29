@@ -11,6 +11,10 @@
     "prisma-setup": "npx prisma generate && npx prisma migrate dev"
   },
   "dependencies": {
+    "@alchemy/aa-accounts": "^3.19.0",
+    "@alchemy/aa-alchemy": "^3.19.0",
+    "@alchemy/aa-core": "^3.19.0",
+    "@alchemy/aa-ethers": "^3.19.0",
     "@prisma/adapter-pg": "^7.0.1",
     "@prisma/client": "^5.22.0",
     "bcrypt": "^6.0.0",
@@ -21,7 +25,8 @@
     "pg": "^8.16.3",
     "postgres": "^3.4.7",
     "react": "^19.2.1",
-    "react-dom": "^19.2.1"
+    "react-dom": "^19.2.1",
+    "viem": "^2.41.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
