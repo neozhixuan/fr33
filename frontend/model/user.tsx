@@ -95,7 +95,7 @@ export async function updateUserWalletInformation(
       data: {
         walletAddress,
         encryptedPrivKey,
-        registrationStep: 3,
+        registrationStep: 2,
       },
     });
   } catch (error) {

@@ -3,10 +3,11 @@
 import { completeKyc, createSmartAccountForUser } from "@/lib/authActions";
 import { KycDataDTO } from "@/types";
 import Button from "@/ui/Button";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function MockKYCDetails({ userEmail }: { userEmail: string }) {
+  const router = useRouter();
   const [isShowUserDetails, setIsShowUserDetails] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,14 +30,19 @@ export default function MockKYCDetails({ userEmail }: { userEmail: string }) {
       await completeKyc(userEmail, userData);
 
       // Step 2: Create smart account wallet
-      await createSmartAccountForUser(userEmail);
+      const smartAccountDetails = await createSmartAccountForUser(userEmail);
+      if (!smartAccountDetails) {
+        throw new Error("Smart account creation failed");
+      }
 
       // Step 3: Navigate to final step
-      redirect("/register-step-three");
+      router.push("/register-step-three");
     } catch (err) {
       console.error("Failed to complete registration:", err);
       setError(
-        err instanceof Error ? err.message : "An unknown error occurred"
+        err instanceof Error
+          ? `Failed to complete registration: ${err.message}`
+          : "An unknown error occurred"
       );
     } finally {
       setIsLoading(false);

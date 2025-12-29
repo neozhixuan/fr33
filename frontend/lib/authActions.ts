@@ -12,6 +12,11 @@ import { KycDataDTO } from "@/types";
 import { createSmartAccount } from "./aaActions";
 import crypto from "crypto";
 
+type SmartAccountDetails = {
+  smartAccountAddress: string;
+  encryptedWithIv: string;
+};
+
 export async function authenticateAction(
   prevState: string | undefined,
   formData: FormData
@@ -71,7 +76,9 @@ export async function completeKyc(email: string, kycDataDTO: KycDataDTO) {
  *
  * @param email - User's email address
  */
-export async function createSmartAccountForUser(email: string) {
+export async function createSmartAccountForUser(
+  email: string
+): Promise<SmartAccountDetails | null> {
   try {
     // Create the smart account
     const { smartAccountAddress, ownerPrivateKey } = await createSmartAccount();
@@ -106,6 +113,7 @@ export async function createSmartAccountForUser(email: string) {
     console.log(
       `Smart account created for user ${email}: ${smartAccountAddress}`
     );
+    return { smartAccountAddress, encryptedWithIv };
   } catch (error) {
     console.error("Failed to create smart account, err:", error);
     throw new Error("Failed to create smart account: " + error);
