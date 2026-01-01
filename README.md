@@ -73,7 +73,7 @@ npm run build
 npm run test
 
 # Work on specific parts
-npm run dev:frontend
+npm run dev:main
 ```
 
 ## Database Setup
