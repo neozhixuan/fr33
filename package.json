@@ -5,26 +5,26 @@
   "private": true,
   "workspaces": [
     "smart-contracts",
-    "frontend",
-    "issuer-service"
+    "main",
+    "compliance-service"
   ],
   "scripts": {
-    "build": "npm run build:smart-contracts && npm run build:frontend && npm run build:issuer-service",
+    "build": "npm run build:smart-contracts && npm run build:main && npm run build:compliance-service",
     "build:smart-contracts": "cd smart-contracts && npm run build",
-    "build:frontend": "cd frontend && npm run build",
-    "build:issuer-service": "cd issuer-service && npm run build",
-    "test": "npm run test:smart-contracts && npm run test:frontend && npm run test:issuer-service",
+    "build:main": "cd main && npm i && npm run build",
+    "build:compliance-service": "cd compliance-service && npm i && npm run build",
+    "test": "npm run test:smart-contracts && npm run test:main && npm run test:compliance-service",
     "test:smart-contracts": "cd smart-contracts && npm run test",
-    "test:frontend": "cd frontend && npm run test",
-    "test:issuer-service": "cd issuer-service && npm run test",
+    "test:main": "cd main && npm run test",
+    "test:compliance-service": "cd compliance-service && npm run test",
     "dev:smart-contracts": "cd smart-contracts && npm run dev",
-    "dev:frontend": "cd frontend && npm run dev",
-    "dev:issuer-service": "cd issuer-service && npm run dev",
-    "lint": "npm run lint:smart-contracts && npm run lint:frontend && npm run lint:issuer-service",
+    "dev:main": "cd main && npm run dev",
+    "dev:compliance-service": "cd compliance-service && npm run dev",
+    "lint": "npm run lint:smart-contracts && npm run lint:main && npm run lint:compliance-service",
     "lint:smart-contracts": "cd smart-contracts && npm run lint",
-    "lint:frontend": "cd frontend && npm run lint",
-    "lint:issuer-service": "cd issuer-service && npm run lint",
-    "prisma-setup:frontend": "cd frontend && npm run prisma-setup"
+    "lint:main": "cd main && npm run lint",
+    "lint:compliance-service": "cd compliance-service && npm run lint",
+    "prisma-setup:main": "cd main && npm run prisma-setup"
   },
   "keywords": [
     "blockchain",
