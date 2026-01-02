@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/db";
-import { KycDataDTO } from "@/types";
-import type { users } from "@prisma/client";
+import { OnboardingStage, User, UserRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 /**
@@ -12,10 +11,11 @@ export async function createUserAfterPasswordHash(
 ) {
   const hashedPassword = await bcrypt.hash(password, 10);
   try {
-    await prisma.users.create({
+    await prisma.user.create({
       data: {
         email: email,
-        password: hashedPassword,
+        passwordHash: hashedPassword,
+        role: UserRole.WORKER,
       },
     });
   } catch (error) {
@@ -27,13 +27,11 @@ export async function createUserAfterPasswordHash(
 /**
  * Use the unique key `email` to fetch user
  */
-export async function getUserByEmail(
-  email: string
-): Promise<users | undefined> {
+export async function getUserByEmail(email: string): Promise<User | undefined> {
   try {
-    const user = (await prisma.users.findUnique({
+    const user = (await prisma.user.findUnique({
       where: { email: email },
-    })) as users | null;
+    })) as User | null;
 
     if (!user) {
       return undefined;
@@ -47,61 +45,69 @@ export async function getUserByEmail(
 }
 
 /**
- * Updates user's KYC information
+ * Check that the user has completed KYC in their current wallet
+ * @param userId - User's unique ID
  */
-export async function updateUserKYCInformation(
-  email: string,
-  kycDataDTO: KycDataDTO
-) {
+export async function getUserIsCompliant(userId: number): Promise<boolean> {
   try {
-    if (kycDataDTO === null) {
-      throw new Error("KYC data cannot be null");
-    }
-
-    const hashedID = await bcrypt.hash(kycDataDTO.idNumber, 10);
-
-    const dob = new Date(kycDataDTO.dob);
-
-    // Update the user's kyc information
-    await prisma.users.update({
-      where: { email: email },
-      data: {
-        fullName: kycDataDTO.fullName,
-        kycVerified: kycDataDTO.kycVerified,
-        idType: kycDataDTO.idType,
-        idHash: hashedID,
-        dob: dob,
-        kycTimestamp: kycDataDTO.kycTimestamp,
+    // For the current user, fetch all wallets and their VC metadata
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        wallets: {
+          include: {
+            vcMetadata: true,
+          },
+        },
       },
     });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Check if any wallet has valid VC
+    return user.wallets.some(
+      (wallet) =>
+        wallet && wallet.vcMetadata && wallet.vcMetadata.status === "VALID"
+    );
   } catch (error) {
-    console.error("Failed to update user's KYC information, err:", error);
-    throw new Error("Failed to update user's KYC information, err: " + error);
+    console.error("Failed to check user compliance:", error);
+    throw new Error("Failed to check user compliance: " + error);
   }
 }
 
-/**
- * Updates user's wallet information after smart account creation
- * Stores the wallet address and encrypted private key
- */
-export async function updateUserWalletInformation(
-  email: string,
-  walletAddress: string,
-  encryptedPrivKey: string
-) {
+export async function getUserOnboardingStatus(
+  userId: number
+): Promise<OnboardingStage | null> {
   try {
-    await prisma.users.update({
-      where: { email: email },
-      data: {
-        walletAddress,
-        encryptedPrivKey,
-        registrationStep: 2,
-      },
+    // Fetch the current user's onboarding status
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { onboardingStage: true },
+    });
+    if (!user) {
+      return null;
+    }
+
+    return user.onboardingStage;
+  } catch (error) {
+    console.error("Failed to get user onboarding status:", error);
+    throw new Error("Failed to get user onboarding status: " + error);
+  }
+}
+
+export async function updateUserOnboardingStage(
+  userId: number,
+  newStage: OnboardingStage
+): Promise<void> {
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { onboardingStage: newStage },
     });
   } catch (error) {
-    console.error("Failed to update user's wallet information, err:", error);
-    throw new Error(
-      "Failed to update user's wallet information, err: " + error
-    );
+    console.error("Failed to update user onboarding stage:", error);
+    throw new Error("Failed to update user onboarding stage: " + error);
   }
 }

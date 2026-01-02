@@ -16,12 +16,10 @@ export function LoginForm() {
     ? getLoginErrorMsg(from!, authorisationError)
     : ""; // Note: Accessing a missing key returns undefined
 
-  // Creates a component state tuple with three elements: the current state, a function to update the state, and a boolean indicating if the action is pending.
-  // Pass in an action and an initial state
   const [loginErrorMessage, loginAction, isLoginPending] = useActionState(
     authenticateAction,
     undefined
-  );
+  ); // Pass in an action and an initial state -> Creates a component state tuple with three elements: the current state, a function to update the state, and a boolean indicating if the action is pending.
 
   return (
     <form action={loginAction} className="space-y-3 position-relative w-1/3">

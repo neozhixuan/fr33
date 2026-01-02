@@ -5,7 +5,7 @@ import { createModularAccountAlchemyClient } from "@alchemy/aa-alchemy";
 import { generatePrivateKey } from "viem/accounts";
 
 /**
- * Creates an ERC-4337 smart account for a user
+ * Creates an ERC-4337 smart account for a user.
  * Returns both the smart account address and the owner's private key
  */
 export async function createSmartAccount(): Promise<{
