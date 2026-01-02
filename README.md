@@ -1,6 +1,173 @@
 # fr33
 
-A blueprint for the first trust-minimised, compliance-aware online marketplace for freelance service payments in Singapore.
+A blueprint for compliance-aware business-to-consumer blockchain payments in Singapore, using a freelance marketplace model (e.g. Upwork) as a demonstration.
+
+## Solution Architecture
+
+### System Architecture
+
+```mermaid
+graph TB
+    subgraph "Presentation Layer"
+        WEB[Web Application<br/>Next.js + React]
+        MOBILE[Mobile Interface<br/>Progressive Web App]
+    end
+
+    subgraph "Application Layer"
+        AUTH[Authentication Service<br/>NextAuth]
+        API[API Gateway<br/>Next.js API Routes]
+        JOB[Job Management Service<br/>PostgreSQL]
+        WALLET[Wallet Abstraction Service<br/>Safe Protocol SDK]
+        MONITOR[Transaction Monitor<br/>AML/CFT Rules Engine]
+    end
+
+    subgraph "Compliance Layer"
+        SINGPASS[Singpass OAuth<br/>Mock/Production]
+        COMPLIANCE[Compliance Microservice<br/>VC Issuer & Verifier]
+        AUDIT[Audit Database<br/>PostgreSQL]
+        REPORTING[Regulatory Reporting<br/>STR Generation]
+    end
+
+    subgraph "Blockchain Layer"
+        BUNDLER[Bundler<br/>Pimlico/Alchemy]
+        PAYMASTER[Paymaster<br/>Gas Sponsorship]
+        ESCROW[JobEscrow Contract<br/>Solidity]
+        FACTORY[Wallet Factory<br/>Safe Account Abstraction]
+        POLYGON[Polygon PoS Chain<br/>Layer 2 Network]
+    end
+
+    subgraph "External Systems"
+        MAS[MAS Reporting Portal]
+        OFFRAMP[Fiat Off-Ramp<br/>Xfers/Transak]
+    end
+
+    WEB --> API
+    MOBILE --> API
+
+    API --> AUTH
+    API --> JOB
+    API --> WALLET
+    API --> MONITOR
+
+    AUTH --> SINGPASS
+    WALLET --> COMPLIANCE
+    MONITOR --> AUDIT
+    MONITOR --> REPORTING
+
+    WALLET --> BUNDLER
+    BUNDLER --> PAYMASTER
+    BUNDLER --> POLYGON
+
+    FACTORY -.deploys.-> ESCROW
+    ESCROW --> POLYGON
+
+    COMPLIANCE --> AUDIT
+    REPORTING --> MAS
+    WALLET --> OFFRAMP
+
+    style POLYGON fill:#8b5cf6
+    style ESCROW fill:#8b5cf6
+    style COMPLIANCE fill:#f59e0b
+    style SINGPASS fill:#f59e0b
+    style BUNDLER fill:#3b82f6
+    style PAYMASTER fill:#3b82f6
+```
+
+1. **Main Application Backend (Next.js Full-Stack Application)**
+
+   Handles user authentication, job marketplace logic, escrow orchestration, and interaction with blockchain infrastructure.
+
+2. **Compliance Microservice**
+
+   Acts as a trusted issuer and verifier of VCs, handling KYC verification, credential issuance, verification, and revocation logic.
+
+3. **Blockchain Layer**
+
+   Holds the smart contracts that are deployed on a Ethereum-compatible network to manage escrow payments, as well as Account Abstraction infrastructure for smart wallet execution.
+
+4. **External Trust and Infrastructure Services**
+
+   Includes mocked SingPass microservice and blockchain node providers (e.g. Alchemy).
+
+### Database Design
+
+```mermaid
+erDiagram
+    USER ||--o{ WALLET : has
+    USER ||--o{ AUDIT_LOG : performs
+    WALLET ||--o| VC_METADATA : contains
+
+    USER {
+        int id PK
+        string email UK
+        string passwordHash
+        enum role "WORKER, EMPLOYER, ADMIN"
+        timestamp createdAt
+        timestamp updatedAt
+    }
+
+    WALLET {
+        int id PK
+        int userId FK
+        string address UK
+        string did UK
+        enum status "ACTIVE, SUSPENDED, REVOKED"
+        timestamp createdAt
+    }
+
+    VC_METADATA {
+        int id PK
+        int walletId FK "UNIQUE"
+        string vcHash
+        timestamp issuedAt
+        timestamp expiresAt
+        string issuerDid
+        enum status "VALID, EXPIRED, REVOKED"
+    }
+
+    JOB {
+        int id PK
+        int employerId
+        string workerWallet "nullable"
+        string title
+        string description
+        decimal amount
+        string escrowAddress
+        enum status "POSTED, FUNDED, IN_PROGRESS, PENDING_APPROVAL, COMPLETED, DISPUTED"
+        timestamp createdAt
+    }
+
+    AUDIT_LOG {
+        int id PK
+        int userId FK "nullable"
+        string walletAddress "nullable"
+        string action
+        json metadata "nullable"
+        string ipAddress "nullable"
+        enum result "ALLOWED, BLOCKED"
+        timestamp createdAt
+    }
+```
+
+1. **User table**
+
+   Handles authentication and authorisation, and identity in the application layer.
+
+2. **Wallet table**
+
+   Handles the smart wallet created in accordance to ERC-4337 Account Abstraction.
+
+3. **VC Metadata table**
+
+   Handles the KYC verification of a user, and the storage of issued Verifiable Credentials (VCs). Checks for the expiration/revocation of a VC.
+
+4. **Job table**
+
+   Handles the storage of jobs created by employers, along with escrow data.
+
+5. **Audit Log table**
+
+   Stores each action performed by a specific user.
 
 ## Setup
 

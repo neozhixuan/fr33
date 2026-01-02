@@ -3,14 +3,14 @@
 import { signIn } from "@/server/auth";
 import {
   createUserAfterPasswordHash,
-  updateUserKYCInformation,
-  updateUserWalletInformation,
+  getUserOnboardingStatus,
+  updateUserOnboardingStage,
 } from "@/model/user";
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
-import { KycDataDTO } from "@/types";
 import { createSmartAccount } from "./aaActions";
 import crypto from "crypto";
+import { OnboardingStage } from "@prisma/client";
 
 type SmartAccountDetails = {
   smartAccountAddress: string;
@@ -30,7 +30,10 @@ export async function authenticateAction(
         return "Invalid credentials, err: " + error.message;
       }
 
-      return "Something went wrong, err: " + (error.message || "Unknown error");
+      return (
+        "Something went wrong in login authentication, err: " +
+        (error.message || "Unknown error")
+      );
     }
     // Non-auth error
     throw error;
@@ -58,15 +61,6 @@ export async function registrationAction(
     }
     // Non-auth error
     throw error;
-  }
-}
-
-export async function completeKyc(email: string, kycDataDTO: KycDataDTO) {
-  try {
-    await updateUserKYCInformation(email, kycDataDTO);
-  } catch (error) {
-    console.error("Failed to complete KYC, err: ", error);
-    throw new Error("Failed to complete KYC, err: " + error);
   }
 }
 
@@ -104,11 +98,11 @@ export async function createSmartAccountForUser(
     const encryptedWithIv = iv.toString("hex") + ":" + encryptedPrivKey;
 
     // Store wallet information in database
-    await updateUserWalletInformation(
-      email,
-      smartAccountAddress,
-      encryptedWithIv
-    );
+    // await updateUserWalletInformation(
+    //   email,
+    //   smartAccountAddress,
+    //   encryptedWithIv
+    // );
 
     console.log(
       `Smart account created for user ${email}: ${smartAccountAddress}`
@@ -126,30 +120,50 @@ export async function createSmartAccountForUser(
  * @param encryptedWithIv - The encrypted private key with IV prepended (format: "iv:encryptedData")
  * @returns The decrypted private key
  */
-export async function decryptPrivateKey(
-  encryptedWithIv: string
-): Promise<string> {
-  const encryptionKey = process.env.WALLET_ENCRYPTION_KEY!;
-  if (!encryptionKey) {
-    throw new Error("WALLET_ENCRYPTION_KEY not configured");
+// export async function decryptPrivateKey(
+//   encryptedWithIv: string
+// ): Promise<string> {
+//   const encryptionKey = process.env.WALLET_ENCRYPTION_KEY!;
+//   if (!encryptionKey) {
+//     throw new Error("WALLET_ENCRYPTION_KEY not configured");
+//   }
+
+//   // Split IV and encrypted data
+//   const [ivHex, encryptedData] = encryptedWithIv.split(":");
+//   if (!ivHex || !encryptedData) {
+//     throw new Error("Invalid encrypted data format");
+//   }
+
+//   // Derive the same 32-byte key
+//   const key = crypto.scryptSync(encryptionKey, "salt", 32);
+
+//   // Convert IV from hex to Buffer
+//   const iv = Buffer.from(ivHex, "hex");
+
+//   // Create decipher
+//   const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
+//   let decrypted = decipher.update(encryptedData, "hex", "utf8");
+//   decrypted += decipher.final("utf8");
+
+//   return decrypted;
+// }
+
+/**
+ * Server action to update user's onboarding stage
+ * Can be called from client components
+ */
+export async function updateOnboardingStageAction(
+  userId: number,
+  newStage: OnboardingStage
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await updateUserOnboardingStage(userId, newStage);
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to update onboarding stage:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
-
-  // Split IV and encrypted data
-  const [ivHex, encryptedData] = encryptedWithIv.split(":");
-  if (!ivHex || !encryptedData) {
-    throw new Error("Invalid encrypted data format");
-  }
-
-  // Derive the same 32-byte key
-  const key = crypto.scryptSync(encryptionKey, "salt", 32);
-
-  // Convert IV from hex to Buffer
-  const iv = Buffer.from(ivHex, "hex");
-
-  // Create decipher
-  const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
-  let decrypted = decipher.update(encryptedData, "hex", "utf8");
-  decrypted += decipher.final("utf8");
-
-  return decrypted;
 }

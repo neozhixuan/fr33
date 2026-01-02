@@ -3,36 +3,39 @@ import CentralContainer from "@/layout/CentralContainer";
 import Button from "@/ui/Button";
 import { redirect } from "next/navigation";
 import { ERROR_TYPE_MAP, getFallbackURL } from "@/utils/errors";
-import { users } from "@prisma/client";
-import { getUserByEmail } from "@/model/user";
+import { getUserIsCompliant } from "@/model/user";
+import { stringToInt } from "@/utils/conv";
 
+/**
+ * Redirects unauthorised users to the appropriate fallback URL.
+ * Server component (runs on Node runtime) - Block SSR if auth doesn't pass
+ */
 async function redirectUnauthorisedUser() {
+  const CURRENT_PAGE = "job-portal";
+
   const session = await auth();
-  if (!session?.user) {
-    redirect(getFallbackURL("job-portal", ERROR_TYPE_MAP.UNAUTHORISED));
+  if (!session || !session?.user) {
+    redirect(getFallbackURL(CURRENT_PAGE, ERROR_TYPE_MAP.UNAUTHORISED));
   }
 
-  let userModel: users | undefined = undefined;
-  if (session && session.user && session.user.email) {
-    userModel = await getUserByEmail(session.user.email);
+  const user = session.user;
+  if (!user.id) {
+    throw new Error("User ID is missing in session: " + JSON.stringify(user));
+  }
+  const userId = stringToInt(user.id as string);
+  const isCompliant = await getUserIsCompliant(userId);
+  if (!isCompliant) {
+    redirect("/compliance");
   }
 
-  if (
-    userModel &&
-    userModel.registrationStep &&
-    userModel.registrationStep < 3
-  ) {
-    const steps = [
-      "/register-step-two",
-      "/register-step-two",
-      "/register-step-three",
-    ];
-    redirect(steps[userModel.registrationStep]);
-  }
+  return;
 }
 
+/**
+ * Job Portal Page.
+ * Accessible only to authenticated users.
+ */
 export default async function JobPortal() {
-  // Server component (runs on Node runtime) - Block SSR if auth doesn't pass
   await redirectUnauthorisedUser();
 
   return (

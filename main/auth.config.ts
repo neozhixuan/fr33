@@ -3,7 +3,7 @@ import { z } from "zod";
 import bcrypt from "bcrypt";
 import { getUserByEmail } from "@/model/user";
 import type { NextAuthConfig } from "next-auth";
-import type { users } from "@prisma/client";
+import type { User } from "@prisma/client";
 
 export default {
   pages: {
@@ -23,10 +23,10 @@ export default {
         if (!parsed.success) return null;
 
         const { email, password } = parsed.data;
-        const user: users | undefined = await getUserByEmail(email);
+        const user: User | undefined = await getUserByEmail(email);
         if (!user) return null;
 
-        const ok = await bcrypt.compare(password, user.password);
+        const ok = await bcrypt.compare(password, user.passwordHash);
         if (!ok) return null;
 
         // Custom return type to match NextAuth's requirements
@@ -36,5 +36,13 @@ export default {
   ],
   session: {
     strategy: "jwt", // required for Edge-friendly tokens
+  },
+  callbacks: {
+    session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.sub as string; // Ensure user ID is included in the session
+      }
+      return session;
+    },
   },
 } satisfies NextAuthConfig;

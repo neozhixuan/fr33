@@ -1,6 +1,12 @@
 // Redirect URL for auth failure
 export const UNAUTHORISED_REDIRECT_URL = "/login";
 
+/**
+ * Returns a variation of /login URL with query params
+ * @param from - page the user is coming from
+ * @param error - error type
+ * @returns
+ */
 export const getFallbackURL = (from: string, error: string) => {
   return `${UNAUTHORISED_REDIRECT_URL}?from=${from}&error=${error}`;
 };
@@ -9,7 +15,7 @@ export const getFallbackURL = (from: string, error: string) => {
 export const ERROR_TYPE_MAP = {
   UNAUTHORISED: "unauthorised",
   DEFAULT: "default",
-  WRONG_STEP_ERROR: "wrong-step-error",
+  KYC_INCOMPLETE: "kyc-incomplete",
 } as const;
 
 export const getLoginErrorMsg = (
@@ -19,7 +25,7 @@ export const getLoginErrorMsg = (
   const error_msg_map: Record<string, string> = {
     [ERROR_TYPE_MAP.UNAUTHORISED]: `Please sign in to access ${from}, err: ${authorisationError}.`,
     [ERROR_TYPE_MAP.DEFAULT]: `Unexpected error: ${authorisationError} from ${from}. Try again`,
-    [ERROR_TYPE_MAP.WRONG_STEP_ERROR]: `You are not at the right registration step to access ${from}: ${authorisationError}.`,
+    [ERROR_TYPE_MAP.KYC_INCOMPLETE]: `You have to complete KYC registration to access ${from}: ${authorisationError}.`,
   };
 
   return (
