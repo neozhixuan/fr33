@@ -111,3 +111,27 @@ export async function updateUserOnboardingStage(
     throw new Error("Failed to update user onboarding stage: " + error);
   }
 }
+
+export async function createUserWalletRecord(
+  userId: number,
+  smartAccountAddress: string,
+  encryptedSignerKey: string,
+  signerKeyIv: string
+): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    await tx.wallet.create({
+      data: {
+        userId,
+        address: smartAccountAddress,
+        did: `did:ethr:sepolia:${smartAccountAddress}`,
+        encryptedSignerKey,
+        signerKeyIv,
+      },
+    });
+
+    await tx.user.update({
+      where: { id: userId },
+      data: { onboardingStage: OnboardingStage.WALLET_CREATED },
+    });
+  });
+}

@@ -39,12 +39,17 @@ model User {
 }
 
 model Wallet {
-  id        Int          @id @default(autoincrement())
-  userId    Int // Many to one
-  address   String       @unique
-  did       String       @unique
-  status    WalletStatus @default(ACTIVE)
-  createdAt DateTime     @default(now()) @db.Timestamptz(6)
+  id      Int    @id @default(autoincrement())
+  userId  Int // Many to one
+  address String @unique
+  did     String @unique
+
+  encryptedSignerKey String // base64 ciphertext
+  signerKeyIv        String // base64 IV
+
+  status           WalletStatus @default(ACTIVE)
+  suspensionReason String?
+  createdAt        DateTime     @default(now()) @db.Timestamptz(6)
 
   user       User        @relation(fields: [userId], references: [id])
   vcMetadata VCMetadata?

@@ -5,7 +5,7 @@ import {
   Checkpointer,
   StartKYC,
   WaitForKYC,
-  CreateWallet,
+  CreateWalletCheckpoint,
   IssueVC,
   Finalising,
 } from ".";
@@ -55,7 +55,12 @@ export default function ComplianceContent({
       <Checkpointer stage={stage} />
       {stage === "REGISTERED" && <StartKYC />}
       {stage === "KYC_PENDING" && <WaitForKYC />}
-      {stage === "KYC_VERIFIED" && <CreateWallet />}
+      {stage === "KYC_VERIFIED" && (
+        <CreateWalletCheckpoint
+          userId={userId}
+          onSuccess={() => setStage(OnboardingStage.WALLET_CREATED)}
+        />
+      )}
       {stage === "WALLET_CREATED" && <IssueVC />}
       {stage === "VC_ISSUED" && <Finalising />}
       <Button onClick={() => redirect("/")}>Return to home</Button>
