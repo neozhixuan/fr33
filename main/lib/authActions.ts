@@ -3,18 +3,20 @@
 import { signIn } from "@/server/auth";
 import {
   createUserAfterPasswordHash,
-  getUserOnboardingStatus,
   updateUserOnboardingStage,
 } from "@/model/user";
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
-import { createSmartAccount } from "./aaActions";
-import crypto from "crypto";
 import { OnboardingStage } from "@prisma/client";
 
-type SmartAccountDetails = {
+export type SmartAccountDetails = {
   smartAccountAddress: string;
   encryptedWithIv: string;
+};
+
+export type ExecutionResult = {
+  success: boolean;
+  error?: string;
 };
 
 export async function authenticateAction(
@@ -65,97 +67,13 @@ export async function registrationAction(
 }
 
 /**
- * Creates a smart account for the user after KYC completion
- * Encrypts and stores the private key in the database
- *
- * @param email - User's email address
- */
-export async function createSmartAccountForUser(
-  email: string
-): Promise<SmartAccountDetails | null> {
-  try {
-    // Create the smart account
-    const { smartAccountAddress, ownerPrivateKey } = await createSmartAccount();
-
-    // Encrypt the private key before storing
-    const encryptionKey = process.env.WALLET_ENCRYPTION_KEY!;
-    if (!encryptionKey) {
-      throw new Error("WALLET_ENCRYPTION_KEY not configured");
-    }
-
-    // Derive a 32-byte key from the encryption key
-    const key = crypto.scryptSync(encryptionKey, "salt", 32);
-
-    // Generate a random initialization vector (IV)
-    const iv = crypto.randomBytes(16);
-
-    // Create cipher using AES-256-CBC
-    const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
-    let encryptedPrivKey = cipher.update(ownerPrivateKey, "utf8", "hex");
-    encryptedPrivKey += cipher.final("hex");
-
-    // Prepend IV to encrypted data (IV is not secret, needed for decryption)
-    const encryptedWithIv = iv.toString("hex") + ":" + encryptedPrivKey;
-
-    // Store wallet information in database
-    // await updateUserWalletInformation(
-    //   email,
-    //   smartAccountAddress,
-    //   encryptedWithIv
-    // );
-
-    console.log(
-      `Smart account created for user ${email}: ${smartAccountAddress}`
-    );
-    return { smartAccountAddress, encryptedWithIv };
-  } catch (error) {
-    console.error("Failed to create smart account, err:", error);
-    throw new Error("Failed to create smart account: " + error);
-  }
-}
-
-/**
- * Decrypts a wallet private key from the database
- *
- * @param encryptedWithIv - The encrypted private key with IV prepended (format: "iv:encryptedData")
- * @returns The decrypted private key
- */
-// export async function decryptPrivateKey(
-//   encryptedWithIv: string
-// ): Promise<string> {
-//   const encryptionKey = process.env.WALLET_ENCRYPTION_KEY!;
-//   if (!encryptionKey) {
-//     throw new Error("WALLET_ENCRYPTION_KEY not configured");
-//   }
-
-//   // Split IV and encrypted data
-//   const [ivHex, encryptedData] = encryptedWithIv.split(":");
-//   if (!ivHex || !encryptedData) {
-//     throw new Error("Invalid encrypted data format");
-//   }
-
-//   // Derive the same 32-byte key
-//   const key = crypto.scryptSync(encryptionKey, "salt", 32);
-
-//   // Convert IV from hex to Buffer
-//   const iv = Buffer.from(ivHex, "hex");
-
-//   // Create decipher
-//   const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
-//   let decrypted = decipher.update(encryptedData, "hex", "utf8");
-//   decrypted += decipher.final("utf8");
-
-//   return decrypted;
-// }
-
-/**
  * Server action to update user's onboarding stage
  * Can be called from client components
  */
 export async function updateOnboardingStageAction(
   userId: number,
   newStage: OnboardingStage
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ExecutionResult> {
   try {
     await updateUserOnboardingStage(userId, newStage);
     return { success: true };
