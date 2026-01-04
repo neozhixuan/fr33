@@ -7,17 +7,8 @@ import {
 } from "@/model/user";
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
-import { OnboardingStage } from "@prisma/client";
-
-export type SmartAccountDetails = {
-  smartAccountAddress: string;
-  encryptedWithIv: string;
-};
-
-export type ExecutionResult = {
-  success: boolean;
-  error?: string;
-};
+import { OnboardingStage } from "@/generated/prisma-client";
+import { ExecutionResult } from "@/types";
 
 export async function authenticateAction(
   prevState: string | undefined,
@@ -55,7 +46,7 @@ export async function registrationAction(
     }
 
     await createUserAfterPasswordHash(email, password);
-    redirect("/job-portal");
+    redirect("/login?error=new-user&from=job-portal");
   } catch (error) {
     // Return err message
     if (error instanceof AuthError) {
@@ -81,7 +72,7 @@ export async function updateOnboardingStageAction(
     console.error("Failed to update onboarding stage:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
+      errorMsg: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }

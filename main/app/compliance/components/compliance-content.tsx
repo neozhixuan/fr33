@@ -3,21 +3,29 @@
 import { useState, useEffect } from "react";
 import {
   Checkpointer,
-  StartKYC,
-  WaitForKYC,
+  StartKYCCheckpoint,
   CreateWalletCheckpoint,
-  IssueVC,
-  Finalising,
+  FinalCheckpoint,
+  RetrieveVCWithCredentialCheckpoint,
 } from ".";
-import { OnboardingStage } from "@prisma/client";
+import { OnboardingStage } from "@/generated/prisma-client";
 import { redirect, useSearchParams } from "next/navigation";
-import { updateOnboardingStageAction } from "@/lib/authActions";
 import Button from "@/ui/Button";
 
 interface ComplianceContentProps {
   initialStage: OnboardingStage | null;
   userId: number;
 }
+
+export type UserInformation = {
+  iss: string;
+  aud: string;
+  sub: string;
+  name: string;
+  birthdate: string;
+  iat: number;
+  exp: number;
+};
 
 export default function ComplianceContent({
   initialStage,
@@ -32,18 +40,9 @@ export default function ComplianceContent({
   // Automatically handle OAuth callback
   useEffect(() => {
     const handleOAuthCallback = async () => {
-      if (stage === OnboardingStage.REGISTERED && authorizationCode && state) {
-        // In a real app, we would send the authorization code to the backend to verify
-        // For this mock, we directly move to the next stage
-        const result = await updateOnboardingStageAction(
-          userId,
-          OnboardingStage.KYC_VERIFIED
-        );
-        if (result.success) {
-          setStage(OnboardingStage.KYC_VERIFIED);
-        } else {
-          console.error("Failed to update onboarding stage:", result.error);
-        }
+      // Move to KYC_PENDING stage if we have the code and state from OAuth
+      if (stage === OnboardingStage.KYC_PENDING && authorizationCode && state) {
+        setStage(OnboardingStage.VC_PENDING);
       }
     };
 
@@ -53,16 +52,32 @@ export default function ComplianceContent({
   return (
     <>
       <Checkpointer stage={stage} />
-      {stage === "REGISTERED" && <StartKYC />}
-      {stage === "KYC_PENDING" && <WaitForKYC />}
-      {stage === "KYC_VERIFIED" && (
+
+      {stage === OnboardingStage.WALLET_PENDING && (
         <CreateWalletCheckpoint
           userId={userId}
-          onSuccess={() => setStage(OnboardingStage.WALLET_CREATED)}
+          onSuccess={() => setStage(OnboardingStage.KYC_PENDING)}
         />
       )}
-      {stage === "WALLET_CREATED" && <IssueVC />}
-      {stage === "VC_ISSUED" && <Finalising />}
+
+      {stage === OnboardingStage.KYC_PENDING && <StartKYCCheckpoint />}
+
+      {stage === OnboardingStage.VC_PENDING && (
+        <RetrieveVCWithCredentialCheckpoint
+          userId={userId}
+          authorizationCode={authorizationCode}
+          state={state}
+          onSuccess={() => setStage(OnboardingStage.COMPLETED)}
+        />
+      )}
+
+      {stage === OnboardingStage.COMPLETED && (
+        <FinalCheckpoint
+          userId={userId}
+          onSuccess={() => redirect("/job-portal")}
+        />
+      )}
+
       <Button onClick={() => redirect("/")}>Return to home</Button>
     </>
   );

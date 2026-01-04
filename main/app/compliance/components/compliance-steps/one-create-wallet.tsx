@@ -15,8 +15,8 @@ export function CreateWalletCheckpoint({
     const res = await createWallet(userId);
 
     if (!res.success) {
-      console.error("Failed to create wallet:", res.error);
-      alert("Failed to create wallet: " + res.error);
+      console.error("Failed to create wallet:", res.errorMsg);
+      alert("Failed to create wallet: " + res.errorMsg);
       return;
     }
 

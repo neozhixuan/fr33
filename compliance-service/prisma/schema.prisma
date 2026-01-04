@@ -1,0 +1,30 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+  output          = "../src/generated/prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRES_URL")
+  schemas  = ["issuer_service"] // Define the schema name here for multi-schema support
+}
+
+model IssuedVC {
+  id         Int      @id @default(autoincrement())
+  vcHash     String   @unique
+  subjectDid String
+  issuedAt   DateTime
+  expiresAt  DateTime
+  status     VCStatus @default(VALID)
+
+  @@schema("issuer_service")
+}
+
+enum VCStatus {
+  VALID
+  REVOKED
+  EXPIRED
+
+  @@schema("issuer_service")
+}

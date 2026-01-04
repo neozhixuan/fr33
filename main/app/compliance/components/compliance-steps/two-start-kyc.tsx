@@ -1,7 +1,7 @@
 import Button from "@/ui/Button";
 import { redirect } from "next/navigation";
 
-export function StartKYC() {
+export function StartKYCCheckpoint() {
   return (
     <>
       <p>Please complete identity verification via Singpass.</p>

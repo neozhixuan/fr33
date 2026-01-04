@@ -91,6 +91,8 @@ graph TB
 
 ### Database Design
 
+#### Main Service (app_service schema)
+
 ```mermaid
 erDiagram
     USER ||--o{ WALLET : has
@@ -102,6 +104,7 @@ erDiagram
         string email UK
         string passwordHash
         enum role "WORKER, EMPLOYER, ADMIN"
+        enum onboardingStage "WALLET_PENDING, KYC_PENDING, VC_PENDING, COMPLETED"
         timestamp createdAt
         timestamp updatedAt
     }
@@ -111,7 +114,10 @@ erDiagram
         int userId FK
         string address UK
         string did UK
+        string encryptedSignerKey
+        string signerKeyIv
         enum status "ACTIVE, SUSPENDED, REVOKED"
+        string suspensionReason
         timestamp createdAt
     }
 
@@ -146,6 +152,20 @@ erDiagram
         string ipAddress "nullable"
         enum result "ALLOWED, BLOCKED"
         timestamp createdAt
+    }
+```
+
+#### Compliance Microservice (issuer_service schema)
+
+```mermaid
+erDiagram
+    ISSUED_VC {
+        int id PK
+        string vcHash UK
+        string subjectDid
+        timestamp issuedAt
+        timestamp expiresAt
+        enum status "VALID, REVOKED, EXPIRED"
     }
 ```
 
