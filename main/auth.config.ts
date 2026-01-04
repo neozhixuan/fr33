@@ -3,7 +3,7 @@ import { z } from "zod";
 import bcrypt from "bcrypt";
 import { getUserByEmail } from "@/model/user";
 import type { NextAuthConfig } from "next-auth";
-import type { User } from "@prisma/client";
+import type { User } from "@/generated/prisma-client";
 
 export default {
   pages: {

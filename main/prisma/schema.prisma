@@ -1,25 +1,30 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+  output          = "../generated/prisma-client"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("POSTGRES_URL")
+  schemas  = ["app_service"] // Define the schema name here for multi-schema support
 }
 
 enum UserRole {
   WORKER
   EMPLOYER
   ADMIN
+
+  @@schema("app_service")
 }
 
 enum OnboardingStage {
-  REGISTERED
+  WALLET_PENDING
   KYC_PENDING
-  KYC_VERIFIED
-  WALLET_CREATED
-  VC_ISSUED
+  VC_PENDING
   COMPLETED
+
+  @@schema("app_service")
 }
 
 // App level account - session ownership
@@ -28,14 +33,15 @@ model User {
   email           String          @unique
   passwordHash    String
   role            UserRole        @default(WORKER)
-  onboardingStage OnboardingStage @default(REGISTERED)
+  onboardingStage OnboardingStage @default(WALLET_PENDING)
   createdAt       DateTime        @default(now()) @db.Timestamptz(6)
   updatedAt       DateTime        @updatedAt @db.Timestamptz(6)
 
   wallets   Wallet[] // One to many
-  auditLogs AuditLog[] // One to many
+  auditLogs AuditLog[] // One to manyyu
 
   @@map("users")
+  @@schema("app_service")
 }
 
 model Wallet {
@@ -55,12 +61,15 @@ model Wallet {
   vcMetadata VCMetadata?
 
   @@map("wallets")
+  @@schema("app_service")
 }
 
 enum WalletStatus {
   ACTIVE
   SUSPENDED
   REVOKED
+
+  @@schema("app_service")
 }
 
 // Indicates whether a wallet is KYC verified (or expired), handled with time-bound verification and revocation handling
@@ -76,12 +85,15 @@ model VCMetadata {
   wallet Wallet @relation(fields: [walletId], references: [id])
 
   @@map("vc_metadata")
+  @@schema("app_service")
 }
 
 enum VCStatus {
   VALID
   EXPIRED
   REVOKED
+
+  @@schema("app_service")
 }
 
 model Job {
@@ -96,6 +108,7 @@ model Job {
   createdAt     DateTime  @default(now()) @db.Timestamptz(6)
 
   @@map("jobs")
+  @@schema("app_service")
 }
 
 enum JobStatus {
@@ -105,6 +118,8 @@ enum JobStatus {
   PENDING_APPROVAL
   COMPLETED
   DISPUTED
+
+  @@schema("app_service")
 }
 
 model AuditLog {
@@ -120,9 +135,12 @@ model AuditLog {
   user User? @relation(fields: [userId], references: [id])
 
   @@map("audit_logs")
+  @@schema("app_service")
 }
 
 enum AuditResult {
   ALLOWED
   BLOCKED
+
+  @@schema("app_service")
 }

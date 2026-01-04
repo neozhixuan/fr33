@@ -184,9 +184,8 @@ Desktop.ini
 *.db-shm
 *.db-wal
 
-# Generated Prisma Client (usually in node_modules, but just in case)
-/main/node_modules/.prisma/
-/main/generated/
+# Generated Prisma Client
+generated/
 
 # Prisma Studio artifacts
 .prisma/
@@ -194,3 +193,4 @@ Desktop.ini
 # Local database seeds/test data (if you create these)
 /main/prisma/dev.db
 /main/prisma/test.db
+

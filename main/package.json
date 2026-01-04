@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "test": "echo \"No test specified\" && exit 0",
-    "prisma-setup": "npx prisma generate && npx prisma migrate dev"
+    "prisma:generate": "prisma generate --schema=./prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate dev --schema=./prisma/schema.prisma",
+    "prisma:migrate:reset": "prisma migrate reset --schema=./prisma/schema.prisma --force",
+    "prisma-setup": "npm run prisma:generate && npm run prisma:migrate"
   },
   "dependencies": {
     "@alchemy/aa-accounts": "^3.19.0",

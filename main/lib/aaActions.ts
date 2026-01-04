@@ -4,9 +4,9 @@ import { LocalAccountSigner, sepolia } from "@alchemy/aa-core";
 import { createModularAccountAlchemyClient } from "@alchemy/aa-alchemy";
 import { generatePrivateKey } from "viem/accounts";
 import { createUserWalletRecord } from "@/model/user";
-import { ExecutionResult } from "./authActions";
+import { ExecutionResult } from "@/types";
 import { encryptPrivateKey } from "./crypto";
-import { Wallet } from "@prisma/client";
+import { Wallet } from "@/generated/prisma-client";
 
 export type SmartAccountDetails = Pick<
   Wallet,
@@ -32,7 +32,7 @@ export const createWallet = async (
     console.log("[CreateWallet] Error creating smart account:", error);
     return {
       success: false,
-      error: "[CreateWallet]Error creating smart account: " + error,
+      errorMsg: "[CreateWallet]Error creating smart account: " + error,
     };
   }
 
@@ -48,7 +48,7 @@ export const createWallet = async (
     console.log("[CreateWallet] Error updating user and wallet record:", error);
     return {
       success: false,
-      error: "Error updating user and wallet record: " + error,
+      errorMsg: "Error updating user and wallet record: " + error,
     };
   }
 

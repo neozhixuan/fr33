@@ -23,6 +23,7 @@ async function redirectUnauthorisedUser() {
     throw new Error("User ID is missing in session: " + JSON.stringify(user));
   }
   const userId = stringToInt(user.id as string);
+
   const isCompliant = await getUserIsCompliant(userId);
   if (!isCompliant) {
     redirect("/compliance");

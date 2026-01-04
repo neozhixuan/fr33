@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { OnboardingStage, User, UserRole } from "@prisma/client";
+import { OnboardingStage, User, UserRole } from "@/generated/prisma-client";
 import bcrypt from "bcryptjs";
 
 /**
@@ -16,6 +16,7 @@ export async function createUserAfterPasswordHash(
         email: email,
         passwordHash: hashedPassword,
         role: UserRole.WORKER,
+        onboardingStage: OnboardingStage.WALLET_PENDING,
       },
     });
   } catch (error) {
@@ -118,20 +119,25 @@ export async function createUserWalletRecord(
   encryptedSignerKey: string,
   signerKeyIv: string
 ): Promise<void> {
-  await prisma.$transaction(async (tx) => {
-    await tx.wallet.create({
-      data: {
-        userId,
-        address: smartAccountAddress,
-        did: `did:ethr:sepolia:${smartAccountAddress}`,
-        encryptedSignerKey,
-        signerKeyIv,
-      },
-    });
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.wallet.create({
+        data: {
+          userId,
+          address: smartAccountAddress,
+          did: `did:ethr:sepolia:${smartAccountAddress}`,
+          encryptedSignerKey,
+          signerKeyIv,
+        },
+      });
 
-    await tx.user.update({
-      where: { id: userId },
-      data: { onboardingStage: OnboardingStage.WALLET_CREATED },
+      await tx.user.update({
+        where: { id: userId },
+        data: { onboardingStage: OnboardingStage.KYC_PENDING },
+      });
     });
-  });
+  } catch (error) {
+    console.error("Failed to create user wallet record:", error);
+    throw new Error("Failed to create user wallet record: " + error);
+  }
 }
