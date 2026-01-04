@@ -4,14 +4,17 @@ import { LocalAccountSigner, sepolia } from "@alchemy/aa-core";
 import { createModularAccountAlchemyClient } from "@alchemy/aa-alchemy";
 import { generatePrivateKey } from "viem/accounts";
 import { createUserWalletRecord } from "@/model/user";
-import { ExecutionResult } from "@/types";
+import { SmartAccountDetails, ExecutionResult } from "@/types";
 import { encryptPrivateKey } from "./crypto";
-import { Wallet } from "@/generated/prisma-client";
+import { getWalletByUserId } from "@/model/wallet";
 
-export type SmartAccountDetails = Pick<
-  Wallet,
-  "address" | "encryptedSignerKey" | "signerKeyIv"
->;
+export async function getWalletAddress(userId: number): Promise<string> {
+  const wallet = await getWalletByUserId(userId);
+  if (!wallet || !wallet.address) {
+    throw new Error("Wallet not found for the user");
+  }
+  return wallet.address;
+}
 
 /**
  * Creates a smart account for the user and updates the database accordingly.

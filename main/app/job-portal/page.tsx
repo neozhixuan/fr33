@@ -1,10 +1,11 @@
-import { auth, signOut } from "@/server/auth";
+import { auth } from "@/server/auth";
 import CentralContainer from "@/layout/CentralContainer";
 import Button from "@/ui/Button";
 import { redirect } from "next/navigation";
 import { ERROR_TYPE_MAP, getFallbackURL } from "@/utils/errors";
 import { getUserIsCompliant } from "@/model/user";
 import { stringToInt } from "@/utils/conv";
+import { logoutAction } from "@/lib/authActions";
 
 /**
  * Redirects unauthorised users to the appropriate fallback URL.
@@ -48,10 +49,4 @@ export default async function JobPortal() {
       </form>
     </CentralContainer>
   );
-}
-
-async function logoutAction() {
-  "use server";
-
-  await signOut({ redirectTo: "/" });
 }

@@ -1,3 +1,5 @@
+import { Wallet } from "@/generated/prisma-client";
+
 // KYC Data
 export type KycDataDTO = {
   fullName: string;
@@ -20,10 +22,10 @@ export type VCData = {
 export type IssueVCResponse = VCData & ExecutionResult;
 
 // Smart Account Details
-export type SmartAccountDetails = {
-  smartAccountAddress: string;
-  encryptedWithIv: string;
-};
+export type SmartAccountDetails = Pick<
+  Wallet,
+  "address" | "encryptedSignerKey" | "signerKeyIv"
+>;
 
 // Misc
 export type ExecutionResult = {

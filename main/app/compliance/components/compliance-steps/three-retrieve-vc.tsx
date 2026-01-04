@@ -3,7 +3,9 @@
 import Button from "@/ui/Button";
 import { UserInformation } from "../compliance-content";
 import { IssueVCResponse } from "@/types";
-import { processVCIssuance, getWalletAddress } from "@/app/compliance/actions";
+import { processVCIssuance } from "@/lib/vcActions";
+import { getWalletAddress } from "@/lib/aaActions";
+import { convertBirthdateToAgeOver } from "@/utils/conv";
 
 export function RetrieveVCWithCredentialCheckpoint({
   authorizationCode,
@@ -16,7 +18,7 @@ export function RetrieveVCWithCredentialCheckpoint({
   userId: number;
   onSuccess: () => void;
 }) {
-  // TODO: Rollback?
+  // TODO: Rollback and improve
   const handleGetInformation = async () => {
     if (!authorizationCode || !state) {
       alert("Missing authorization code or state");
@@ -111,20 +113,4 @@ export function RetrieveVCWithCredentialCheckpoint({
       </Button>
     </div>
   );
-}
-
-function convertBirthdateToAgeOver(birthdate: string, minAge: number): boolean {
-  const birthDate = new Date(birthdate);
-  const today = new Date();
-  const age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-
-  if (
-    monthDiff < 0 ||
-    (monthDiff === 0 && today.getDate() < birthDate.getDate())
-  ) {
-    return age - 1 >= minAge;
-  }
-
-  return age >= minAge;
 }

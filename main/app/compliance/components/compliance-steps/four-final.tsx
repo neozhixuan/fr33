@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getWalletAddress } from "../../actions";
+import { getWalletAddress } from "@/lib/aaActions";
 import Button from "@/ui/Button";
 
 export function FinalCheckpoint({

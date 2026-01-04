@@ -1,6 +1,6 @@
 "use server";
 
-import { signIn } from "@/server/auth";
+import { signIn, signOut } from "@/server/auth";
 import {
   createUserAfterPasswordHash,
   updateUserOnboardingStage,
@@ -9,6 +9,10 @@ import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
 import { OnboardingStage } from "@/generated/prisma-client";
 import { ExecutionResult } from "@/types";
+
+export async function logoutAction() {
+  await signOut({ redirectTo: "/" });
+}
 
 export async function authenticateAction(
   prevState: string | undefined,

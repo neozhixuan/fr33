@@ -6,14 +6,6 @@ import { createVCMetadata } from "@/model/vc";
 import { updateUserOnboardingStage } from "@/model/user";
 import { OnboardingStage } from "@/generated/prisma-client";
 
-export async function getWalletAddress(userId: number): Promise<string> {
-  const wallet = await getWalletByUserId(userId);
-  if (!wallet || !wallet.address) {
-    throw new Error("Wallet not found for the user");
-  }
-  return wallet.address;
-}
-
 export async function processVCIssuance(
   userId: number,
   vcResponse: IssueVCResponse
