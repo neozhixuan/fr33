@@ -38,7 +38,7 @@ model User {
   updatedAt       DateTime        @updatedAt @db.Timestamptz(6)
 
   wallets   Wallet[] // One to many
-  auditLogs AuditLog[] // One to manyyu
+  auditLogs AuditLog[] // One to many
 
   @@map("users")
   @@schema("app_service")

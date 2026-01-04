@@ -27,7 +27,7 @@ export const getLoginErrorMsg = (
     [ERROR_TYPE_MAP.UNAUTHORISED]: `Please sign in to access ${from}, err: ${authorisationError}.`,
     [ERROR_TYPE_MAP.DEFAULT]: `Unexpected error: ${authorisationError} from ${from}. Try again`,
     [ERROR_TYPE_MAP.KYC_INCOMPLETE]: `You have to complete KYC registration to access ${from}: ${authorisationError}.`,
-    [ERROR_TYPE_MAP.NEW_USER]: `Welcome new user! Please complete the registration process to access ${from}.`,
+    [ERROR_TYPE_MAP.NEW_USER]: `Welcome new user! Please login and complete the compliance process to access our ${from}.`,
   };
 
   return (
