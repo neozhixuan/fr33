@@ -5,6 +5,7 @@ import { authenticateAction } from "@/lib/authActions";
 import Button from "@/ui/Button";
 import { useSearchParams } from "next/navigation";
 import { getLoginErrorMsg } from "@/utils/errors";
+import FormInput from "@/ui/FormInput";
 
 export function LoginForm() {
   const redirectURL = "/job-portal";
@@ -32,34 +33,20 @@ export function LoginForm() {
         </div>
       )}
       <div className="w-full flex flex-col gap-5">
-        <div className="relative">
-          <label className="mb-3 mt-5" htmlFor="email">
-            Email
-          </label>
-
-          <input
-            className="peer block w-full rounded-md border border-gray-200 py-[9px] text-sm outline-2"
-            id="email"
-            type="email"
-            name="email"
-            placeholder="Enter your email address"
-            required
-          />
-        </div>
-
-        <div className="relative">
-          <label className="mb-3 mt-5" htmlFor="password">
-            Password
-          </label>
-          <input
-            className="peer block w-full rounded-md border border-gray-200 py-[9px] text-sm outline-2"
-            id="password"
-            type="password"
-            name="password"
-            placeholder="Enter your password"
-            required
-          />
-        </div>
+        <FormInput
+          id="email"
+          type="email"
+          placeholder="Enter your email address"
+          label="Email"
+          required
+        />
+        <FormInput
+          id="password"
+          type="password"
+          placeholder="Enter your password"
+          label="Password"
+          required
+        />
 
         <div
           className="flex justify-center h-8 items-end space-x-1"

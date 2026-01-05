@@ -1,57 +1,65 @@
-# Sample Hardhat 3 Beta Project (`mocha` and `ethers`)
+## Running in local development
 
-This project showcases a Hardhat 3 Beta project using `mocha` for tests and the `ethers` library for Ethereum interactions.
+1. Compile the contract
 
-To learn more about the Hardhat 3 Beta, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3 Beta](https://hardhat.org/hardhat3-beta-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+```sh
+npx hardhat compile
+```
 
-## Project Overview
+    - Compiles the solidity code
+    - Generate ABI and Bytecode
+    - No interaction with chain
 
-This example project includes:
+2. Start localhost chain
 
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using `mocha` and ethers.js
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
+```sh
+npx hardhat node
+```
 
-## Usage
+```sh
+Accounts
+========
 
-### Running Tests
+WARNING: Funds sent on live network to accounts with publicly known private keys WILL BE LOST.
 
-To run all the tests in the project, execute the following command:
+Account #0:  0xf39fd6e51aad88f6f4ce6ab8... (10000 ETH)
+Private Key: 0xac0974bec39a17e36ba4a6b4...
+```
 
-```shell
+3. Deploy the contract to local chain
+
+```sh
+npx hardhat ignition deploy ignition/modules/JobEscrow.ts
+```
+
+```sh
+You are running Hardhat Ignition against an in-process instance of Hardhat Network.
+This will execute the deployment, but the results will be lost.
+You can use --network <network-name> to deploy to a different network.
+
+Hardhat Ignition 🚀
+
+Deploying [ JobEscrowModule ]
+
+Batch #1
+  Executed JobEscrowModule#JobEscrow
+
+[ JobEscrowModule ] successfully deployed 🚀
+
+Deployed Addresses
+
+JobEscrowModule#JobEscrow - 0x5FbDB2315678afecb367f032d93F642f64180aa3
+```
+
+4. Test the contract
+
+```sh
 npx hardhat test
 ```
 
-You can also selectively run the Solidity or `mocha` tests:
-
-```shell
-npx hardhat test solidity
-npx hardhat test mocha
-```
-
-### Make a deployment to Sepolia
-
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
-
-To run the deployment to a local chain:
-
-```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
-```
-
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
-
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
-
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
-
-```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
-```
-
-After setting the variable, you can run the deployment with the Sepolia network:
-
-```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
+```sh
+# Example output
+  JobEscrow
+    ✔ should create and fund a job  (114ms)
+    ✔ worker accepts job and gets paid (135ms)
 ```

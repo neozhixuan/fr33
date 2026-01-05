@@ -5,7 +5,7 @@ import { createModularAccountAlchemyClient } from "@alchemy/aa-alchemy";
 import { generatePrivateKey } from "viem/accounts";
 import { createUserWalletRecord } from "@/model/user";
 import { SmartAccountDetails, ExecutionResult } from "@/types";
-import { encryptPrivateKey } from "./crypto";
+import { decryptPrivateKey, encryptPrivateKey } from "./crypto";
 import { getWalletByUserId } from "@/model/wallet";
 
 export async function getWalletAddress(userId: number): Promise<string> {
@@ -107,4 +107,85 @@ export async function createSmartAccount(): Promise<SmartAccountDetails> {
     encryptedSignerKey: ciphertext,
     signerKeyIv: iv,
   };
+}
+
+/**
+ * Get Smart Account Client for User
+ * @param userId
+ * @returns
+ */
+async function getSmartAccountClient(userId: number) {
+  // Get user's wallet from DB
+  const wallet = await getWalletByUserId(userId);
+
+  if (!wallet) {
+    throw new Error("No active wallet found for user");
+  }
+
+  // Decrypt the signer key
+  const signerPrivateKey = decryptPrivateKey(
+    wallet.encryptedSignerKey,
+    wallet.signerKeyIv
+  );
+
+  // Create signer from decrypted private key
+  const signer = LocalAccountSigner.privateKeyToAccountSigner(
+    signerPrivateKey as `0x${string}`
+  );
+
+  // Create Alchemy smart account client
+  if (!process.env.ALCHEMY_API_KEY) {
+    throw new Error(
+      "[createSmartAccount] Missing ALCHEMY_API_KEY in environment variables"
+    );
+  }
+  if (!process.env.ALCHEMY_GAS_POLICY_ID) {
+    throw new Error(
+      "[createSmartAccount] Missing ALCHEMY_GAS_POLICY_ID in environment variables"
+    );
+  }
+
+  const client = await createModularAccountAlchemyClient({
+    apiKey: process.env.ALCHEMY_API_KEY,
+    chain: sepolia,
+    signer,
+    gasManagerConfig: {
+      policyId: process.env.ALCHEMY_GAS_POLICY_ID,
+    },
+  });
+
+  return { client, smartAccountAddress: wallet.address };
+}
+
+/**
+ * Send Transaction via Smart Account
+ * @param userId
+ * @param to
+ * @param data
+ * @param value
+ * @returns
+ */
+export async function sendSmartAccountTransaction(
+  userId: number,
+  to: string,
+  data: string,
+  value?: bigint
+) {
+  const { client } = await getSmartAccountClient(userId);
+
+  // Send UserOperation via Alchemy
+  const result = await client.sendUserOperation({
+    uo: {
+      target: to as `0x${string}`,
+      data: data as `0x${string}`,
+      value: value || BigInt(0),
+    },
+  });
+
+  // Wait for transaction to be mined
+  const txHash = await client.waitForUserOperationTransaction({
+    hash: result.hash,
+  });
+
+  return { txHash, userOpHash: result.hash };
 }

@@ -1,4 +1,4 @@
-import { Wallet } from "@/generated/prisma-client";
+import { Job, Wallet } from "@/generated/prisma-client";
 
 // KYC Data
 export type KycDataDTO = {
@@ -31,4 +31,13 @@ export type SmartAccountDetails = Pick<
 export type ExecutionResult = {
   success: boolean;
   errorMsg?: string;
+};
+
+// Job
+export type JobListItem = Omit<Job, "amount"> & { amount: number };
+
+export type JobListingsResult = {
+  items: JobListItem[];
+  total: number;
+  totalPages: number;
 };

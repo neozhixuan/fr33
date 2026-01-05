@@ -1,7 +1,9 @@
 "use client";
 
+import { UserRole } from "@/generated/prisma-client";
 import { registrationAction } from "@/lib/authActions";
 import Button from "@/ui/Button";
+import FormInput from "@/ui/FormInput";
 import { useActionState } from "react";
 
 export function RegistrationForm() {
@@ -22,33 +24,41 @@ export function RegistrationForm() {
         </div>
       )}
       <div className="w-full flex flex-col gap-5">
+        <FormInput
+          id="email"
+          type="email"
+          placeholder="Enter your email address"
+          label="Email"
+          required
+        />
+
+        <FormInput
+          id="password"
+          type="password"
+          placeholder="Enter your password"
+          label="Password"
+          required
+        />
+
         <div className="relative">
-          <label className="mb-3 mt-5" htmlFor="email">
-            Email
+          <label className="mb-3 mt-5" htmlFor="role">
+            Role
           </label>
 
-          <input
+          <select
             className="peer block w-full rounded-md border border-gray-200 py-[9px] text-sm outline-2"
-            id="email"
-            type="email"
-            name="email"
-            placeholder="Enter your email address"
+            id="role"
+            name="role"
             required
-          />
-        </div>
-
-        <div className="relative">
-          <label className="mb-3 mt-5" htmlFor="password">
-            Password
-          </label>
-          <input
-            className="peer block w-full rounded-md border border-gray-200 py-[9px] text-sm outline-2"
-            id="password"
-            type="password"
-            name="password"
-            placeholder="Enter your password"
-            required
-          />
+          >
+            {Object.values(UserRole)
+              .filter((role) => role !== UserRole.ADMIN)
+              .map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
+          </select>
         </div>
 
         <div
@@ -64,11 +74,6 @@ export function RegistrationForm() {
             Register
           </Button>
         </div>
-        {registrationErrorMessage && (
-          <>
-            <p>{registrationErrorMessage}</p>
-          </>
-        )}
       </div>
     </form>
   );
