@@ -1,11 +1,11 @@
 "use server";
 
-import { LocalAccountSigner, sepolia } from "@alchemy/aa-core";
+import { LocalAccountSigner, polygonAmoy } from "@alchemy/aa-core";
 import { createModularAccountAlchemyClient } from "@alchemy/aa-alchemy";
 import { generatePrivateKey } from "viem/accounts";
 import { createUserWalletRecord } from "@/model/user";
 import { SmartAccountDetails, ExecutionResult } from "@/types";
-import { encryptPrivateKey } from "./crypto";
+import { decryptPrivateKey, encryptPrivateKey } from "./crypto";
 import { getWalletByUserId } from "@/model/wallet";
 
 export async function getWalletAddress(userId: number): Promise<string> {
@@ -86,7 +86,7 @@ export async function createSmartAccount(): Promise<SmartAccountDetails> {
   // Create the Alchemy client with Modular Account and Gas Manager (paymaster)
   const client = await createModularAccountAlchemyClient({
     apiKey: process.env.ALCHEMY_API_KEY,
-    chain: sepolia,
+    chain: polygonAmoy,
     signer,
     gasManagerConfig: {
       policyId: process.env.ALCHEMY_GAS_POLICY_ID, // Smart account will be automatically deployed on first transaction
@@ -107,4 +107,111 @@ export async function createSmartAccount(): Promise<SmartAccountDetails> {
     encryptedSignerKey: ciphertext,
     signerKeyIv: iv,
   };
+}
+
+/**
+ * Get Smart Account Client for User
+ * @param userId
+ * @returns
+ */
+async function getSmartAccountClient(userId: number) {
+  try {
+    // Get user's wallet from DB
+    const wallet = await getWalletByUserId(userId);
+
+    if (!wallet) {
+      throw new Error("No active wallet found for user");
+    }
+
+    // Recreate the signer by decrypting the private key
+    const signerPrivateKey = decryptPrivateKey(
+      wallet.encryptedSignerKey,
+      wallet.signerKeyIv
+    );
+    const signer = LocalAccountSigner.privateKeyToAccountSigner(
+      signerPrivateKey as `0x${string}`
+    );
+
+    if (!process.env.ALCHEMY_API_KEY) {
+      throw new Error(
+        "[createSmartAccount] Missing ALCHEMY_API_KEY in environment variables"
+      );
+    }
+    if (!process.env.ALCHEMY_GAS_POLICY_ID) {
+      throw new Error(
+        "[createSmartAccount] Missing ALCHEMY_GAS_POLICY_ID in environment variables"
+      );
+    }
+
+    // Generate the client that controls this smart wallet
+    const client = await createModularAccountAlchemyClient({
+      apiKey: process.env.ALCHEMY_API_KEY,
+      chain: polygonAmoy,
+      signer,
+      gasManagerConfig: {
+        policyId: process.env.ALCHEMY_GAS_POLICY_ID,
+      },
+    });
+
+    return { client, smartAccountAddress: wallet.address };
+  } catch (error) {
+    console.error("Error getting smart account client:", error);
+    throw new Error(
+      "Error getting smart account client: " + (error as Error).message
+    );
+  }
+}
+
+type SendSmartAccountTransactionResult = {
+  txHash: `0x${string}`;
+  userOpHash: `0x${string}`;
+} & ExecutionResult;
+
+/**
+ * Send Transaction via Smart Account
+ * @param userId
+ * @param to
+ * @param data
+ * @param value
+ * @returns
+ */
+export async function sendSmartAccountTransaction(
+  userId: number,
+  to: string,
+  data: string,
+  value?: bigint
+): Promise<SendSmartAccountTransactionResult> {
+  const { client } = await getSmartAccountClient(userId);
+
+  try {
+    console.log("[sendSmartAccountTransaction] UserOp Details:", {
+      smartAccountAddress: client.getAddress(),
+      target: to,
+      dataLength: data.length,
+      value: value?.toString(),
+    });
+
+    // Send UserOperation via Alchemy
+    const result = await client.sendUserOperation({
+      uo: {
+        target: to as `0x${string}`,
+        data: data as `0x${string}`,
+        value: value || BigInt(0),
+      },
+    });
+    // Wait for transaction to be mined
+    const txHash = await client.waitForUserOperationTransaction({
+      hash: result.hash,
+    });
+
+    return { txHash, userOpHash: result.hash, success: true };
+  } catch (error) {
+    console.error("Error with UserOperation transaction:", error);
+    return {
+      success: false,
+      errorMsg: (error as Error).message,
+      txHash: "" as `0x${string}`,
+      userOpHash: "" as `0x${string}`,
+    };
+  }
 }

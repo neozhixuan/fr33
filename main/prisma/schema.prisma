@@ -97,15 +97,18 @@ enum VCStatus {
 }
 
 model Job {
-  id            Int       @id @default(autoincrement())
-  employerId    Int
-  workerWallet  String?
-  title         String
-  description   String
-  amount        Decimal
-  escrowAddress String
-  status        JobStatus @default(POSTED)
-  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
+  id           Int     @id @default(autoincrement()) // Database ID
+  employerId   Int
+  workerWallet String?
+  title        String
+  description  String
+  amount       Decimal
+
+  fundedTxHash String?
+  fundedAt     DateTime?
+
+  status    JobStatus @default(POSTED)
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
 
   @@map("jobs")
   @@schema("app_service")

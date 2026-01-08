@@ -7,7 +7,8 @@ import bcrypt from "bcryptjs";
  */
 export async function createUserAfterPasswordHash(
   email: string,
-  password: string
+  password: string,
+  role: UserRole
 ) {
   const hashedPassword = await bcrypt.hash(password, 10);
   try {
@@ -15,7 +16,7 @@ export async function createUserAfterPasswordHash(
       data: {
         email: email,
         passwordHash: hashedPassword,
-        role: UserRole.WORKER,
+        role: role,
         onboardingStage: OnboardingStage.WALLET_PENDING,
       },
     });
@@ -125,7 +126,7 @@ export async function createUserWalletRecord(
         data: {
           userId,
           address: smartAccountAddress,
-          did: `did:ethr:sepolia:${smartAccountAddress}`,
+          did: `did:ethr:polygon:${smartAccountAddress}`,
           encryptedSignerKey,
           signerKeyIv,
         },

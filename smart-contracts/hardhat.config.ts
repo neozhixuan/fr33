@@ -36,6 +36,16 @@ const config: HardhatUserConfig = {
       url: configVariable("SEPOLIA_RPC_URL"),
       accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
     },
+    polygon: {
+      type: "http",
+      url: configVariable("POLYGON_RPC_URL"),
+      accounts: [configVariable("POLYGON_PRIVATE_KEY")],
+    },
+    polygonAmoy: {
+      type: "http",
+      url: configVariable("POLYGON_AMOY_RPC_URL"),
+      accounts: [configVariable("POLYGON_AMOY_PRIVATE_KEY")],
+    },
   },
 };
 

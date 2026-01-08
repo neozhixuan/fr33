@@ -1,12 +1,12 @@
 import { prisma } from "@/lib/db";
-import { Wallet } from "@/generated/prisma-client";
+import { Wallet, WalletStatus } from "@/generated/prisma-client";
 
 export async function getWalletByUserId(
   userId: number
 ): Promise<Wallet | null> {
   try {
     const wallet = await prisma.wallet.findFirst({
-      where: { userId },
+      where: { userId, status: WalletStatus.ACTIVE },
     });
 
     return wallet ?? null;

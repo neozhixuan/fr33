@@ -7,13 +7,19 @@ import {
 } from "@/model/user";
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
-import { OnboardingStage } from "@/generated/prisma-client";
+import { OnboardingStage, UserRole } from "@/generated/prisma-client";
 import { ExecutionResult } from "@/types";
 
 export async function logoutAction() {
   await signOut({ redirectTo: "/" });
 }
 
+/**
+ * Server action to login user
+ * @param prevState - TODO
+ * @param formData - credentials
+ * @returns errorMsg if any
+ */
 export async function authenticateAction(
   prevState: string | undefined,
   formData: FormData
@@ -37,6 +43,12 @@ export async function authenticateAction(
   }
 }
 
+/**
+ * Server action to register user
+ * @param prevState - TODO
+ * @param formData - credentials
+ * @returns errorMsg if any
+ */
 export async function registrationAction(
   prevState: string | undefined,
   formData: FormData
@@ -44,12 +56,13 @@ export async function registrationAction(
   try {
     const email = formData.get("email")?.toString() ?? "";
     const password = formData.get("password")?.toString() ?? "";
+    const role = formData.get("role")?.toString() ?? "";
 
-    if (!email || !password) {
+    if (!email || !password || !role) {
       return "Error: Please fill in all fields.";
     }
 
-    await createUserAfterPasswordHash(email, password);
+    await createUserAfterPasswordHash(email, password, role as UserRole);
     redirect("/login?error=new-user&from=job-portal");
   } catch (error) {
     // Return err message
@@ -64,6 +77,9 @@ export async function registrationAction(
 /**
  * Server action to update user's onboarding stage
  * Can be called from client components
+ * @param userId - user's unique id
+ * @param newStage - new onboarding stage
+ * @returns success boolean and optional errorMsg
  */
 export async function updateOnboardingStageAction(
   userId: number,
