@@ -6,8 +6,9 @@
     "build": "npx hardhat compile",
     "test": "npx hardhat test",
     "dev": "npx hardhat node",
-    "deploy:local": "npx hardhat ignition deploy ignition/modules/Counter.ts --network localhost",
-    "deploy:sepolia": "npx hardhat ignition deploy ignition/modules/Counter.ts --network sepolia",
+    "deploy:local": "npx hardhat ignition deploy ignition/modules/JobEscrow.ts --network localhost",
+    "deploy:polygon": "npx hardhat ignition deploy ignition/modules/JobEscrow.ts --network polygon",
+    "deploy:polygonAmoy": "npx hardhat ignition deploy ignition/modules/JobEscrow.ts --network polygonAmoy",
     "lint": "echo 'Linting not configured yet'",
     "clean": "npx hardhat clean"
   },

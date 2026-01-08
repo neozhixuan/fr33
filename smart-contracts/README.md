@@ -7,6 +7,7 @@ npx hardhat compile
 ```
 
     - Compiles the solidity code
+      - The tests depend on the structure of the compiled code
     - Generate ABI and Bytecode
     - No interaction with chain
 

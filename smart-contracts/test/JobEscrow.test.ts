@@ -25,9 +25,7 @@ describe("JobEscrow", function () {
     const jobId = 1;
     const amount = ethers.parseEther("0.1");
 
-    await escrow
-      .connect(employer)
-      .createEscrow(jobId, worker.address, { value: amount });
+    await escrow.connect(employer).fundJob(jobId, { value: amount });
 
     const job = await escrow.getJob(jobId);
 
@@ -42,9 +40,7 @@ describe("JobEscrow", function () {
     const jobId = 1;
     const amount = ethers.parseEther("0.1");
 
-    await escrow
-      .connect(employer)
-      .createEscrow(jobId, worker.address, { value: amount });
+    await escrow.connect(employer).fundJob(jobId, { value: amount });
 
     await escrow.connect(worker).acceptJob(jobId);
     await escrow.connect(worker).requestRelease(jobId);

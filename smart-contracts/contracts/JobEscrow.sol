@@ -69,7 +69,7 @@ contract JobEscrow {
     @param jobId The unique ID for the job
     @param worker The address of the worker
     */
-    function createEscrow(uint256 jobId) external payable {
+    function fundJob(uint256 jobId) external payable {
         require(msg.value > 0, "Must send funds");
         require(jobs[jobId].employer == address(0), "Job already exists");
 
@@ -91,12 +91,12 @@ contract JobEscrow {
     @notice Worker accepts the job to start working
     @param jobId The unique ID for the job
     */
-    function acceptJob(
-        uint256 jobId
-    ) external jobExists(jobId) onlyWorker(jobId) {
-        Job storage job = jobs[jobId]; // TODO
+    function acceptJob(uint256 jobId) external jobExists(jobId) {
+        Job storage job = jobs[jobId];
         require(job.state == JobState.FUNDED, "Job not funded");
+        require(job.worker == address(0), "Job already accepted");
 
+        job.worker = msg.sender;
         job.state = JobState.IN_PROGRESS;
 
         emit JobAccepted(jobId, msg.sender);

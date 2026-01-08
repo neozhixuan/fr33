@@ -138,7 +138,8 @@ erDiagram
         string title
         string description
         decimal amount
-        string escrowAddress
+        string fundedTxHash "nullable"
+        timestamp fundedAt "nullable"
         enum status "POSTED, FUNDED, IN_PROGRESS, PENDING_APPROVAL, COMPLETED, DISPUTED"
         timestamp createdAt
     }
@@ -183,7 +184,7 @@ erDiagram
 
 4. **Job table**
 
-   Handles the storage of jobs created by employers, along with escrow data.
+    Handles jobs created by employers, including on-chain funding metadata (`fundedTxHash`, `fundedAt`) and status lifecycle.
 
 5. **Audit Log table**
 
@@ -232,9 +233,9 @@ npm run build
 3. Set up your environment variables:
 
    - Create a `.env` file in the root directory.
-   - Add your Ethereum Sepolia testnet RPC URL and private key:
+   - Add your Polygon testnet RPC URL and private key:
      ```
-     SEPOLIA_RPC_URL=your_sepolia_rpc_url
+     POLYGON_RPC_URL=your_polygon_amoy_rpc_url
      PRIVATE_KEY=your_private_key
      ```
 
@@ -284,6 +285,16 @@ You can remove `node_modules` and reinstall necessary libraries in case of confl
 ```sh
 rm -rf node_modules package-lock.json
 npm install
+```
+
+Transactions may revert with 400 even before hitting the paymaster; this means that our code itself is the issue, and calling the contract would fail. Possibilities:
+
+    - Cannot reach the contract from Alchemy Smart Wallet; deploy your escrow contract online
+    - Gas policy set to the wrong network
+    - Insufficient POL in the smart account
+
+```sh
+Details: {"code":-32521,"message":"execution reverted","data":{"revertData":"0x"}}
 ```
 
 ## Notes
