@@ -5,7 +5,7 @@ const PRIVATE_KEY = process.env.ADMIN_PRIVATE_KEY!;
 const RPC_URL = process.env.RPC_URL!;
 
 const ESCROW_ABI = [
-  "function createEscrow(uint256 jobId) external payable",
+  "function fundJob(uint256 jobId) external payable",
   "function acceptJob(uint256 jobId) external",
   "function requestRelease(uint256 jobId) external",
   "function approveRelease(uint256 jobId) external",
@@ -26,12 +26,20 @@ export function getProvider() {
   return new ethers.JsonRpcProvider(RPC_URL);
 }
 
-export function getContract(signerOrProvider: ethers.Provider | ethers.Signer) {
-  return new ethers.Contract(
-    ESCROW_CONTRACT_ADDRESS,
-    ESCROW_ABI,
-    signerOrProvider
-  );
+export async function getContract(
+  signerOrProvider: ethers.Provider | ethers.Signer
+) {
+  try {
+    return new ethers.Contract(
+      ESCROW_CONTRACT_ADDRESS,
+      ESCROW_ABI,
+      signerOrProvider
+    );
+  } catch (error) {
+    throw new Error(
+      "Error connecting to JobEscrow contract: " + (error as Error).message
+    );
+  }
 }
 
 export function getAdminSigner() {
@@ -39,6 +47,11 @@ export function getAdminSigner() {
   return new ethers.Wallet(PRIVATE_KEY, provider);
 }
 
-export function parseEther(amountInEth: string): bigint {
-  return ethers.parseEther(amountInEth);
+export function parseSGDToPolygon(amountInSGD: string): bigint {
+  // TODO
+  const mockPOLToSGDRate = 6.5721; // 1 SGD = 6.5721 POL
+
+  return ethers.parseEther(
+    (parseFloat(amountInSGD) * mockPOLToSGDRate).toString()
+  );
 }

@@ -13,7 +13,7 @@ import {
   ESCROW_CONTRACT_ADDRESS,
   getContract,
   getProvider,
-  parseEther,
+  parseSGDToPolygon,
 } from "./ether";
 import { sendSmartAccountTransaction } from "./aaActions";
 
@@ -83,22 +83,45 @@ export async function fundEscrowAction(params: {
   if (job.status !== "POSTED") throw new Error("Job already funded");
 
   // 2. Connect to contract with employer's wallet
-  const contract = getContract(getProvider());
-  const amountInWei = parseEther(job.amount.toString());
-  const callData = contract.interface.encodeFunctionData("createEscrow", [
-    jobId,
-  ]);
+  const contract = await getContract(getProvider());
+  const amountInWei = parseSGDToPolygon(job.amount.toString());
+  const callData = contract.interface.encodeFunctionData("fundJob", [jobId]);
 
   // 3. Send transaction via smart account
-  const { txHash, userOpHash } = await sendSmartAccountTransaction(
-    employerId,
-    ESCROW_CONTRACT_ADDRESS,
-    callData,
-    amountInWei
-  );
+  let txHashResult: string, userOpHashResult: string;
+  try {
+    const { txHash, userOpHash, success, errorMsg } =
+      await sendSmartAccountTransaction(
+        employerId,
+        ESCROW_CONTRACT_ADDRESS,
+        callData,
+        amountInWei
+      );
+    if (!success) {
+      throw new Error("Smart account transaction failed: " + errorMsg);
+    }
+    txHashResult = txHash;
+    userOpHashResult = userOpHash;
+  } catch (error) {
+    console.error("Error funding escrow:", error);
+    return {
+      success: false,
+      errorMsg: `Error funding escrow: ${(error as Error).message}`,
+    };
+  }
+
+  // TODO: Verify on-chain state
 
   // 4. update db with funded status
-  await updateJobAfterFunding(jobId);
+  try {
+    await updateJobAfterFunding(jobId, txHashResult);
+  } catch (error) {
+    console.error("Error updating job after funding:", error);
+    return {
+      success: false,
+      errorMsg: `Error updating job after funding: ${(error as Error).message}`,
+    };
+  }
 
-  return { success: true, txHash, userOpHash };
+  return { success: true, txHashResult, userOpHashResult };
 }

@@ -1,6 +1,6 @@
 "use server";
 
-import { LocalAccountSigner, sepolia } from "@alchemy/aa-core";
+import { LocalAccountSigner, polygonAmoy } from "@alchemy/aa-core";
 import { createModularAccountAlchemyClient } from "@alchemy/aa-alchemy";
 import { generatePrivateKey } from "viem/accounts";
 import { createUserWalletRecord } from "@/model/user";
@@ -86,7 +86,7 @@ export async function createSmartAccount(): Promise<SmartAccountDetails> {
   // Create the Alchemy client with Modular Account and Gas Manager (paymaster)
   const client = await createModularAccountAlchemyClient({
     apiKey: process.env.ALCHEMY_API_KEY,
-    chain: sepolia,
+    chain: polygonAmoy,
     signer,
     gasManagerConfig: {
       policyId: process.env.ALCHEMY_GAS_POLICY_ID, // Smart account will be automatically deployed on first transaction
@@ -115,47 +115,57 @@ export async function createSmartAccount(): Promise<SmartAccountDetails> {
  * @returns
  */
 async function getSmartAccountClient(userId: number) {
-  // Get user's wallet from DB
-  const wallet = await getWalletByUserId(userId);
+  try {
+    // Get user's wallet from DB
+    const wallet = await getWalletByUserId(userId);
 
-  if (!wallet) {
-    throw new Error("No active wallet found for user");
-  }
+    if (!wallet) {
+      throw new Error("No active wallet found for user");
+    }
 
-  // Decrypt the signer key
-  const signerPrivateKey = decryptPrivateKey(
-    wallet.encryptedSignerKey,
-    wallet.signerKeyIv
-  );
+    // Recreate the signer by decrypting the private key
+    const signerPrivateKey = decryptPrivateKey(
+      wallet.encryptedSignerKey,
+      wallet.signerKeyIv
+    );
+    const signer = LocalAccountSigner.privateKeyToAccountSigner(
+      signerPrivateKey as `0x${string}`
+    );
 
-  // Create signer from decrypted private key
-  const signer = LocalAccountSigner.privateKeyToAccountSigner(
-    signerPrivateKey as `0x${string}`
-  );
+    if (!process.env.ALCHEMY_API_KEY) {
+      throw new Error(
+        "[createSmartAccount] Missing ALCHEMY_API_KEY in environment variables"
+      );
+    }
+    if (!process.env.ALCHEMY_GAS_POLICY_ID) {
+      throw new Error(
+        "[createSmartAccount] Missing ALCHEMY_GAS_POLICY_ID in environment variables"
+      );
+    }
 
-  // Create Alchemy smart account client
-  if (!process.env.ALCHEMY_API_KEY) {
+    // Generate the client that controls this smart wallet
+    const client = await createModularAccountAlchemyClient({
+      apiKey: process.env.ALCHEMY_API_KEY,
+      chain: polygonAmoy,
+      signer,
+      gasManagerConfig: {
+        policyId: process.env.ALCHEMY_GAS_POLICY_ID,
+      },
+    });
+
+    return { client, smartAccountAddress: wallet.address };
+  } catch (error) {
+    console.error("Error getting smart account client:", error);
     throw new Error(
-      "[createSmartAccount] Missing ALCHEMY_API_KEY in environment variables"
+      "Error getting smart account client: " + (error as Error).message
     );
   }
-  if (!process.env.ALCHEMY_GAS_POLICY_ID) {
-    throw new Error(
-      "[createSmartAccount] Missing ALCHEMY_GAS_POLICY_ID in environment variables"
-    );
-  }
-
-  const client = await createModularAccountAlchemyClient({
-    apiKey: process.env.ALCHEMY_API_KEY,
-    chain: sepolia,
-    signer,
-    gasManagerConfig: {
-      policyId: process.env.ALCHEMY_GAS_POLICY_ID,
-    },
-  });
-
-  return { client, smartAccountAddress: wallet.address };
 }
+
+type SendSmartAccountTransactionResult = {
+  txHash: `0x${string}`;
+  userOpHash: `0x${string}`;
+} & ExecutionResult;
 
 /**
  * Send Transaction via Smart Account
@@ -170,22 +180,38 @@ export async function sendSmartAccountTransaction(
   to: string,
   data: string,
   value?: bigint
-) {
+): Promise<SendSmartAccountTransactionResult> {
   const { client } = await getSmartAccountClient(userId);
 
-  // Send UserOperation via Alchemy
-  const result = await client.sendUserOperation({
-    uo: {
-      target: to as `0x${string}`,
-      data: data as `0x${string}`,
-      value: value || BigInt(0),
-    },
-  });
+  try {
+    console.log("[sendSmartAccountTransaction] UserOp Details:", {
+      smartAccountAddress: client.getAddress(),
+      target: to,
+      dataLength: data.length,
+      value: value?.toString(),
+    });
 
-  // Wait for transaction to be mined
-  const txHash = await client.waitForUserOperationTransaction({
-    hash: result.hash,
-  });
+    // Send UserOperation via Alchemy
+    const result = await client.sendUserOperation({
+      uo: {
+        target: to as `0x${string}`,
+        data: data as `0x${string}`,
+        value: value || BigInt(0),
+      },
+    });
+    // Wait for transaction to be mined
+    const txHash = await client.waitForUserOperationTransaction({
+      hash: result.hash,
+    });
 
-  return { txHash, userOpHash: result.hash };
+    return { txHash, userOpHash: result.hash, success: true };
+  } catch (error) {
+    console.error("Error with UserOperation transaction:", error);
+    return {
+      success: false,
+      errorMsg: (error as Error).message,
+      txHash: "" as `0x${string}`,
+      userOpHash: "" as `0x${string}`,
+    };
+  }
 }

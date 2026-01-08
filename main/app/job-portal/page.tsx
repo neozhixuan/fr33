@@ -60,7 +60,7 @@ export default async function JobPortal({
   return (
     <CentralContainer>
       <p>Job portal</p>
-      <p className="text-red-500">Error &lt;{error}&gt;.</p>
+      {error && <p className="text-red-500">Error &lt;{error}&gt;.</p>}
       <p>
         Welcome, {user.email} ({user.role})
       </p>

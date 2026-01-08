@@ -2,11 +2,11 @@
 
 import { JobStatus } from "@/generated/prisma-client";
 import CentralContainer from "@/layout/CentralContainer";
-import { fundEscrowAction, getJobDetailsAction } from "@/lib/jobActions";
+import { getJobDetailsAction } from "@/lib/jobActions";
 import { auth } from "@/server/auth";
-import Button from "@/ui/Button";
 import { getFallbackURL } from "@/utils/errors";
 import { redirect } from "next/navigation";
+import FundJobForm from "./components/FundJobForm";
 
 type JobPageProps = {
   params: Promise<{ jobId: string }>;
@@ -44,25 +44,28 @@ export default async function JobPage({ params }: JobPageProps) {
         <div className="flex flex-col gap-4 w-[300px] border rounded-lg p-4">
           <strong>Employer Actions</strong>
           {job.status === JobStatus.POSTED ? (
-            <form
-              action={async () => {
-                "use server";
-                await fundEscrowAction({ jobId: job.id, employerId: userId });
-              }}
-            >
-              <Button type="submit">Fund Job</Button>
-            </form>
+            <FundJobForm jobId={job.id} employerId={userId} />
           ) : (
-            <p>Job is already funded.</p>
+            <>
+              <p>Job is already funded.</p>{" "}
+              {job.status === JobStatus.FUNDED && (
+                <div>
+                  <p>
+                    <b>Funded at:</b>{" "}
+                    {job.fundedAt
+                      ? new Date(job.fundedAt).toLocaleString()
+                      : "N/A"}
+                  </p>
+                  <br />
+                  <p className="break-words">
+                    <b>Transaction hash for funding action:</b>{" "}
+                    {job.fundedTxHash}
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </div>
-      )}
-      {job.status === JobStatus.FUNDED && (
-        <>
-          <p>Escrow Address: {job.escrowAddress}</p>
-          <p>On-chain Job ID: {job.onChainJobId}</p>
-          <p>Worker Wallet: {job.workerWallet}</p>
-        </>
       )}
     </CentralContainer>
   );

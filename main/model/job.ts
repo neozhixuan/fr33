@@ -68,14 +68,14 @@ export async function getJobDetails(jobId: number): Promise<Job | null> {
   }
 }
 
-export async function updateJobAfterFunding(jobId: number) {
+export async function updateJobAfterFunding(jobId: number, txHash: string) {
   try {
     await prisma.job.update({
       where: { id: jobId },
       data: {
         status: "FUNDED",
-        escrowAddress: ESCROW_CONTRACT_ADDRESS,
-        onChainJobId: jobId,
+        fundedAt: new Date(),
+        fundedTxHash: txHash,
       },
     });
   } catch (error) {
