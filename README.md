@@ -184,7 +184,7 @@ erDiagram
 
 4. **Job table**
 
-    Handles jobs created by employers, including on-chain funding metadata (`fundedTxHash`, `fundedAt`) and status lifecycle.
+   Handles jobs created by employers, including on-chain funding metadata (`fundedTxHash`, `fundedAt`) and status lifecycle.
 
 5. **Audit Log table**
 
@@ -296,6 +296,10 @@ Transactions may revert with 400 even before hitting the paymaster; this means t
 ```sh
 Details: {"code":-32521,"message":"execution reverted","data":{"revertData":"0x"}}
 ```
+
+Unable to send transactions on Metamask
+
+- Reset the nonce data
 
 ## Notes
 

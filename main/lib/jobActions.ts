@@ -6,8 +6,9 @@ import {
   getJobDetails,
   getJobListings,
   updateJobAfterFunding,
+  updateJobAfterAcceptance,
 } from "@/model/job";
-import { JobListingsResult } from "@/types";
+import { JobListingsResult, SmartAccountTransactionResult } from "@/types";
 import { redirect } from "next/navigation";
 import {
   ESCROW_CONTRACT_ADDRESS,
@@ -15,7 +16,7 @@ import {
   getProvider,
   parseSGDToPolygon,
 } from "./ether";
-import { sendSmartAccountTransaction } from "./aaActions";
+import { sendSmartAccountTransaction, getWalletAddress } from "./aaActions";
 
 /**
  * Create a job as an employer
@@ -74,8 +75,9 @@ export async function getJobDetailsAction(jobId: number): Promise<Job | null> {
 export async function fundEscrowAction(params: {
   jobId: number;
   employerId: number;
-}) {
+}): Promise<SmartAccountTransactionResult> {
   const { jobId, employerId } = params;
+  const fallbackErrorHash = "" as `0x${string}`;
 
   // 1. Get job from DB
   const job = await getJobDetails(jobId);
@@ -107,6 +109,8 @@ export async function fundEscrowAction(params: {
     return {
       success: false,
       errorMsg: `Error funding escrow: ${(error as Error).message}`,
+      txHash: fallbackErrorHash,
+      userOpHash: fallbackErrorHash,
     };
   }
 
@@ -120,8 +124,76 @@ export async function fundEscrowAction(params: {
     return {
       success: false,
       errorMsg: `Error updating job after funding: ${(error as Error).message}`,
+      txHash: fallbackErrorHash,
+      userOpHash: fallbackErrorHash,
     };
   }
 
-  return { success: true, txHashResult, userOpHashResult };
+  return {
+    success: true,
+    txHash: txHashResult as `0x${string}`,
+    userOpHash: userOpHashResult as `0x${string}`,
+  };
+}
+
+export async function acceptJobAction(params: {
+  jobId: number;
+  workerId: number;
+}) {
+  const { jobId, workerId } = params;
+
+  // 1. Get job from DB
+  const job = await getJobDetails(jobId);
+  if (!job) throw new Error("Job not found");
+  if (job.status !== "FUNDED") throw new Error("Job is not funded yet");
+
+  // 2. Connect to contract with worker's wallet
+  const contract = await getContract(getProvider());
+  const callData = contract.interface.encodeFunctionData("acceptJob", [jobId]);
+
+  // 3. Send transaction via worker's smart account (no value required)
+  let txHashResult: string, userOpHashResult: string;
+  try {
+    const { txHash, userOpHash, success, errorMsg } =
+      await sendSmartAccountTransaction(
+        workerId,
+        ESCROW_CONTRACT_ADDRESS,
+        callData
+      );
+    if (!success) {
+      throw new Error("Smart account transaction failed: " + errorMsg);
+    }
+    txHashResult = txHash;
+    userOpHashResult = userOpHash;
+  } catch (error) {
+    console.error("Error accepting job:", error);
+    return {
+      success: false,
+      errorMsg: `Error accepting job: ${(error as Error).message}`,
+      txHash: "" as `0x${string}`,
+      userOpHash: "" as `0x${string}`,
+    };
+  }
+
+  // 4. Update DB with worker wallet and status -> IN_PROGRESS
+  try {
+    const workerWalletAddress = await getWalletAddress(workerId);
+    await updateJobAfterAcceptance(jobId, workerWalletAddress, txHashResult);
+  } catch (error) {
+    console.error("Error updating job after acceptance:", error);
+    return {
+      success: false,
+      errorMsg: `Error updating job after acceptance: ${
+        (error as Error).message
+      }`,
+      txHash: "" as `0x${string}`,
+      userOpHash: "" as `0x${string}`,
+    };
+  }
+
+  return {
+    success: true,
+    txHash: txHashResult as `0x${string}`,
+    userOpHash: userOpHashResult as `0x${string}`,
+  };
 }

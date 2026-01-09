@@ -85,3 +85,26 @@ export async function updateJobAfterFunding(jobId: number, txHash: string) {
     );
   }
 }
+
+export async function updateJobAfterAcceptance(
+  jobId: number,
+  workerWallet: string,
+  txHash: string
+) {
+  try {
+    await prisma.job.update({
+      where: { id: jobId },
+      data: {
+        status: JobStatus.IN_PROGRESS,
+        workerWallet,
+        acceptTxHash: txHash,
+        acceptedAt: new Date(),
+      },
+    });
+  } catch (error) {
+    console.error("Error updating job after acceptance:", error);
+    throw new Error(
+      "Error updating job after acceptance: " + (error as Error).message
+    );
+  }
+}

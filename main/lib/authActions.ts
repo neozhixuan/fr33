@@ -10,8 +10,19 @@ import { redirect } from "next/navigation";
 import { OnboardingStage, UserRole } from "@/generated/prisma-client";
 import { ExecutionResult } from "@/types";
 
-export async function logoutAction() {
-  await signOut({ redirectTo: "/" });
+/**
+ * Server action to logout and redirect to specified path
+ * @param redirectPath - path to redirect after logout
+ */
+export async function logoutAction(redirectPath: string) {
+  await signOut({ redirectTo: redirectPath });
+}
+
+/**
+ * Server action to logout and redirect to home
+ */
+export async function logoutToHomeAction() {
+  await logoutAction("/");
 }
 
 /**

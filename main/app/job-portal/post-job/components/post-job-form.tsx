@@ -43,8 +43,9 @@ export function PostJobForm({ employerId }: { employerId: number }) {
           id="payment"
           type="number"
           placeholder="Enter the value of money released upon job completion"
-          label="Payment Amount (in SGD)"
+          label="Payment Amount to 2 decimal places (in SGD)"
           required
+          step={0.01}
         />
 
         <input type="hidden" name="employerId" value={employerId} />

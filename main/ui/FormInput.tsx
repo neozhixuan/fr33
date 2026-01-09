@@ -1,24 +1,25 @@
-export default function FormInput(props: {
+export default function FormInput({
+  id,
+  label,
+  required, // Intersection clause means we can strongly override base attributes
+  ...rest
+}: {
   id: string;
-  type: string;
-  placeholder: string;
   label: string;
   required?: boolean;
-}) {
+} & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div className="relative">
-      <label className="mb-3 mt-5" htmlFor={props.id}>
-        {props.label}
-        {props.required && <span className="text-red-500">*</span>}
+      <label className="mb-3 mt-5" htmlFor={id}>
+        {label}
+        {required && <span className="text-red-500">*</span>}
       </label>
 
       <input
         className="peer block w-full rounded-md border border-gray-200 py-[9px] text-sm outline-2"
-        id={props.id}
-        type={props.type}
-        name={props.id}
-        placeholder={props.placeholder}
-        required={props.required}
+        name={id}
+        required={required}
+        {...rest}
       />
     </div>
   );

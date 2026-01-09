@@ -60,28 +60,35 @@ export function RetrieveVCWithCredentialCheckpoint({
     }
 
     // 2. Issue Verifiable Credential (VC) based on the user information
-    const res = await fetch("http://localhost:3001/vc/issue", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        subjectDid: `did:ethr:${walletAddress}`,
-        kycData: {
-          uinHash: mockUserInfo.sub,
-          nameHash: mockUserInfo.name,
-          birthdate: mockUserInfo.birthdate,
-          ageOver: convertBirthdateToAgeOver(mockUserInfo.birthdate, 18),
-          country: "SG",
-          verifiedAt: new Date(mockUserInfo.iat * 1000).toISOString(),
-        },
-      }),
-    });
-
-    if (!res.ok) {
-      alert("Failed to issue VC: " + (await res.text()));
+    let data: IssueVCResponse;
+    try {
+      const res = await fetch("http://localhost:3001/vc/issue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subjectDid: `did:ethr:${walletAddress}`,
+          kycData: {
+            uinHash: mockUserInfo.sub,
+            nameHash: mockUserInfo.name,
+            birthdate: mockUserInfo.birthdate,
+            ageOver: convertBirthdateToAgeOver(mockUserInfo.birthdate, 18),
+            country: "SG",
+            verifiedAt: new Date(mockUserInfo.iat * 1000).toISOString(),
+          },
+        }),
+      });
+      if (!res.ok) {
+        alert("Failed to issue VC: " + (await res.text()));
+        return;
+      }
+      data = await res.json();
+    } catch (error) {
+      alert(
+        "Failed to fetch from compliance microservice: " +
+          (error as Error).message
+      );
       return;
     }
-
-    const data: IssueVCResponse = await res.json();
 
     if (!data.success) {
       alert(

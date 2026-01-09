@@ -1,5 +1,10 @@
 import { prisma } from "@/lib/db";
-import { OnboardingStage, User, UserRole } from "@/generated/prisma-client";
+import {
+  OnboardingStage,
+  User,
+  UserRole,
+  Wallet,
+} from "@/generated/prisma-client";
 import bcrypt from "bcryptjs";
 
 /**
@@ -46,11 +51,19 @@ export async function getUserByEmail(email: string): Promise<User | undefined> {
   }
 }
 
+type UserIsCompliantResult = {
+  user: User | undefined;
+  wallet: Wallet | undefined;
+  isCompliant: boolean;
+};
+
 /**
  * Check that the user has completed KYC in their current wallet
  * @param userId - User's unique ID
  */
-export async function getUserIsCompliant(userId: number): Promise<boolean> {
+export async function getUserAuthorisationStatus(
+  userId: number
+): Promise<UserIsCompliantResult> {
   try {
     // For the current user, fetch all wallets and their VC metadata
     const user = await prisma.user.findUnique({
@@ -65,14 +78,16 @@ export async function getUserIsCompliant(userId: number): Promise<boolean> {
     });
 
     if (!user) {
-      throw new Error("User not found");
+      return { user: undefined, wallet: undefined, isCompliant: false };
     }
 
     // Check if any wallet has valid VC
-    return user.wallets.some(
+    const isCompliant = user.wallets.some(
       (wallet) =>
         wallet && wallet.vcMetadata && wallet.vcMetadata.status === "VALID"
     );
+    // TODO
+    return { user, wallet: user.wallets[0], isCompliant };
   } catch (error) {
     console.error("Failed to check user compliance:", error);
     throw new Error("Failed to check user compliance: " + error);

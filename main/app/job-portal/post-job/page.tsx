@@ -3,7 +3,7 @@ import { auth } from "@/server/auth";
 import Button from "@/ui/Button";
 import { ERROR_TYPE_MAP, getFallbackURL } from "@/utils/errors";
 import { redirect } from "next/navigation";
-import { redirectUnauthorisedUser } from "../page";
+import { ensureAuthorisedAndCompliantUser } from "../page";
 import { getUserByEmail } from "@/model/user";
 import { PostJobForm } from "./components";
 
@@ -15,13 +15,7 @@ export default async function PostJobPage() {
     redirect(getFallbackURL(CURRENT_PAGE, ERROR_TYPE_MAP.UNAUTHORISED));
   }
 
-  await redirectUnauthorisedUser(session.user);
-
-  const user = await getUserByEmail(session.user.email || "");
-  if (!user) {
-    redirect(getFallbackURL(CURRENT_PAGE, ERROR_TYPE_MAP.UNAUTHORISED));
-  }
-
+  const { user } = await ensureAuthorisedAndCompliantUser(session.user);
   if (user.role !== "EMPLOYER") {
     redirect("/job-portal");
   }

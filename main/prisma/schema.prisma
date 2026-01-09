@@ -107,6 +107,9 @@ model Job {
   fundedTxHash String?
   fundedAt     DateTime?
 
+  acceptTxHash String?
+  acceptedAt   DateTime?
+
   status    JobStatus @default(POSTED)
   createdAt DateTime  @default(now()) @db.Timestamptz(6)
 
