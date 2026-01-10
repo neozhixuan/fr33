@@ -6,10 +6,11 @@ import { getJobDetailsAction } from "@/lib/jobActions";
 import { auth } from "@/server/auth";
 import { getFallbackURL } from "@/utils/errors";
 import { redirect } from "next/navigation";
-import FundJobForm from "./components/FundJobForm";
+import EmployerActions from "./components/EmployerActions";
 import Button from "@/ui/Button";
 import { ensureAuthorisedAndCompliantUser } from "../page";
-import ApplyJobForm from "./components/ApplyJobForm";
+import WorkerActions from "./components/WorkerActions";
+import MainJobSection from "./components/MainJobSection";
 
 type JobPageProps = {
   params: Promise<{ jobId: string }>;
@@ -44,16 +45,8 @@ export default async function JobPage({ params }: JobPageProps) {
   return (
     <CentralContainer>
       <Button href="/job-portal">Back to Job Portal</Button>
-      <div>Job Page for Job ID: {jobId}</div>
-      <p>Title: {job.title}</p>
-      <p>Description: {job.description}</p>
-      <p>Payment: SGD {job.amount.toFixed(2)}</p>
-      <p>Posted on: {new Date(job.createdAt).toLocaleDateString()}</p>
-      <p>
-        Job Status:{" "}
-        {job.status === JobStatus.POSTED ? "Not funded yet" : job.status}
-      </p>
-      <p>Employer ID: {job.employerId}</p>
+
+      <MainJobSection job={jobForClient} />
 
       {/* Employer Actions */}
       {userId === job.employerId && (
@@ -74,7 +67,7 @@ export default async function JobPage({ params }: JobPageProps) {
           ) : (
             <p>Unexpected Error: No wallet linked</p>
           )}
-          <FundJobForm job={jobForClient} employerId={userId} />
+          <EmployerActions job={jobForClient} employerId={userId} />
         </div>
       )}
 
@@ -101,7 +94,7 @@ export default async function JobPage({ params }: JobPageProps) {
             ) : (
               <p>Unexpected Error: No wallet linked</p>
             )}
-            <ApplyJobForm
+            <WorkerActions
               job={jobForClient}
               workerId={userId}
               workerWallet={wallet?.address || ""}

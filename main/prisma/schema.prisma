@@ -110,6 +110,12 @@ model Job {
   acceptTxHash String?
   acceptedAt   DateTime?
 
+  applyReleaseTxHash String?
+  applyReleaseAt     DateTime?
+
+  approveReleaseTxHash String?
+  approveReleaseAt     DateTime?
+
   status    JobStatus @default(POSTED)
   createdAt DateTime  @default(now()) @db.Timestamptz(6)
 

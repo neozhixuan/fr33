@@ -46,3 +46,5 @@ export type JobListingsResult = {
   total: number;
   totalPages: number;
 };
+
+export type JobForClientType = Omit<Job, "amount"> & { amount: number };
