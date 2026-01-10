@@ -1,12 +1,16 @@
 "use server";
 
-import { JobStatus } from "@/generated/prisma-client";
+import { JobStatus, UserRole } from "@/generated/prisma-client";
 import CentralContainer from "@/layout/CentralContainer";
 import { getJobDetailsAction } from "@/lib/jobActions";
 import { auth } from "@/server/auth";
 import { getFallbackURL } from "@/utils/errors";
 import { redirect } from "next/navigation";
-import FundJobForm from "./components/FundJobForm";
+import EmployerActions from "./components/EmployerActions";
+import Button from "@/ui/Button";
+import { ensureAuthorisedAndCompliantUser } from "../page";
+import WorkerActions from "./components/WorkerActions";
+import MainJobSection from "./components/MainJobSection";
 
 type JobPageProps = {
   params: Promise<{ jobId: string }>;
@@ -22,51 +26,82 @@ export default async function JobPage({ params }: JobPageProps) {
 
   const userId = parseInt(session.user.id as string);
 
+  const { user, wallet } = await ensureAuthorisedAndCompliantUser(session.user);
+
   const job = await getJobDetailsAction(parseInt(jobId));
   if (!job) {
     redirect("/job-portal?error=job-not-found");
-    return;
   }
+
+  // Convert Decimal to number for Client Component
+  const jobForClient = {
+    ...job,
+    amount:
+      typeof job.amount === "object"
+        ? job.amount.toNumber?.()
+        : Number(job.amount),
+  };
 
   return (
     <CentralContainer>
-      <div>Job Page for Job ID: {jobId}</div>
-      <p>Title: {job.title}</p>
-      <p>Description: {job.description}</p>
-      <p>Payment: SGD {job.amount.toFixed(2)}</p>
-      <p>Posted on: {new Date(job.createdAt).toLocaleDateString()}</p>
-      <p>
-        Job Status:{" "}
-        {job.status === JobStatus.POSTED ? "Not funded yet" : job.status}
-      </p>
-      <p>Employer ID: {job.employerId}</p>
+      <Button href="/job-portal">Back to Job Portal</Button>
+
+      <MainJobSection job={jobForClient} />
+
+      {/* Employer Actions */}
       {userId === job.employerId && (
         <div className="flex flex-col gap-4 w-[300px] border rounded-lg p-4">
           <strong>Employer Actions</strong>
-          {job.status === JobStatus.POSTED ? (
-            <FundJobForm jobId={job.id} employerId={userId} />
+          {wallet ? (
+            <p className="break-words">
+              Employer wallet:{" "}
+              <a
+                href={`https://amoy.polygonscan.com/address/${wallet.address}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-decoration-line text-blue-900"
+              >
+                {wallet.address}
+              </a>
+            </p>
           ) : (
-            <>
-              <p>Job is already funded.</p>{" "}
-              {job.status === JobStatus.FUNDED && (
-                <div>
-                  <p>
-                    <b>Funded at:</b>{" "}
-                    {job.fundedAt
-                      ? new Date(job.fundedAt).toLocaleString()
-                      : "N/A"}
-                  </p>
-                  <br />
-                  <p className="break-words">
-                    <b>Transaction hash for funding action:</b>{" "}
-                    {job.fundedTxHash}
-                  </p>
-                </div>
-              )}
-            </>
+            <p>Unexpected Error: No wallet linked</p>
           )}
+          <EmployerActions job={jobForClient} employerId={userId} />
         </div>
       )}
+
+      {/* Worker Actions (when job is funded) */}
+      {/* TODO: Cleanup */}
+      {user.role === UserRole.WORKER &&
+        (job.status === JobStatus.FUNDED ||
+          job.status === JobStatus.IN_PROGRESS ||
+          job.status === JobStatus.PENDING_APPROVAL) && (
+          <div className="flex flex-col gap-4 w-[300px] border rounded-lg p-4">
+            <strong>Worker Actions</strong>
+            {wallet ? (
+              <p className="break-words">
+                Worker wallet:{" "}
+                <a
+                  href={`https://amoy.polygonscan.com/address/${wallet.address}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-decoration-line text-blue-900"
+                >
+                  {wallet.address}
+                </a>
+              </p>
+            ) : (
+              <p>Unexpected Error: No wallet linked</p>
+            )}
+            <WorkerActions
+              job={jobForClient}
+              workerId={userId}
+              workerWallet={wallet?.address || ""}
+            />
+            <p></p>
+          </div>
+        )}
     </CentralContainer>
   );
 }

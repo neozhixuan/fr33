@@ -11,7 +11,6 @@ import {
 import { OnboardingStage } from "@/generated/prisma-client";
 import { redirect, useSearchParams } from "next/navigation";
 import Button from "@/ui/Button";
-import { signOut } from "@/server/auth";
 import { logoutAction } from "@/lib/authActions";
 
 interface ComplianceContentProps {
@@ -82,7 +81,7 @@ export default function ComplianceContent({
 
       <Button onClick={() => redirect("/")}>Return to home</Button>
 
-      <Button onClick={logoutAction}>Logout</Button>
+      <Button onClick={async () => await logoutAction("/")}>Logout</Button>
     </>
   );
 }

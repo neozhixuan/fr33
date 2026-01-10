@@ -7,7 +7,7 @@ import { createUserWalletRecord } from "@/model/user";
 import { SmartAccountDetails, ExecutionResult } from "@/types";
 import { decryptPrivateKey, encryptPrivateKey } from "./crypto";
 import { getWalletByUserId } from "@/model/wallet";
-
+import { SmartAccountTransactionResult } from "@/types";
 export async function getWalletAddress(userId: number): Promise<string> {
   const wallet = await getWalletByUserId(userId);
   if (!wallet || !wallet.address) {
@@ -162,11 +162,6 @@ async function getSmartAccountClient(userId: number) {
   }
 }
 
-type SendSmartAccountTransactionResult = {
-  txHash: `0x${string}`;
-  userOpHash: `0x${string}`;
-} & ExecutionResult;
-
 /**
  * Send Transaction via Smart Account
  * @param userId
@@ -180,7 +175,7 @@ export async function sendSmartAccountTransaction(
   to: string,
   data: string,
   value?: bigint
-): Promise<SendSmartAccountTransactionResult> {
+): Promise<SmartAccountTransactionResult> {
   const { client } = await getSmartAccountClient(userId);
 
   try {
@@ -192,6 +187,7 @@ export async function sendSmartAccountTransaction(
     });
 
     // Send UserOperation via Alchemy
+    // - NOTE: If this is the first transaction of this account, the smart account will only be deployed here
     const result = await client.sendUserOperation({
       uo: {
         target: to as `0x${string}`,

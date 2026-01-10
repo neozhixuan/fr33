@@ -85,3 +85,70 @@ export async function updateJobAfterFunding(jobId: number, txHash: string) {
     );
   }
 }
+
+export async function updateJobAfterAcceptJob(
+  jobId: number,
+  workerWallet: string,
+  txHash: string
+) {
+  try {
+    await prisma.job.update({
+      where: { id: jobId },
+      data: {
+        status: JobStatus.IN_PROGRESS,
+        workerWallet,
+        acceptTxHash: txHash,
+        acceptedAt: new Date(),
+      },
+    });
+  } catch (error) {
+    console.error("Error updating job after acceptance:", error);
+    throw new Error(
+      "Error updating job after acceptance: " + (error as Error).message
+    );
+  }
+}
+
+export async function updateJobAfterApplyFundRelease(
+  jobId: number,
+  txHash: string
+) {
+  try {
+    await prisma.job.update({
+      where: { id: jobId },
+      data: {
+        applyReleaseTxHash: txHash,
+        applyReleaseAt: new Date(),
+        status: JobStatus.PENDING_APPROVAL,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating job after applying for fund release:", error);
+    throw new Error(
+      "Error updating job after applying for fund release: " +
+        (error as Error).message
+    );
+  }
+}
+
+export async function updateJobAfterAcceptFundRelease(
+  jobId: number,
+  txHash: string
+) {
+  try {
+    await prisma.job.update({
+      where: { id: jobId },
+      data: {
+        status: JobStatus.COMPLETED,
+        approveReleaseTxHash: txHash,
+        approveReleaseAt: new Date(),
+      },
+    });
+  } catch (error) {
+    console.error("Error updating job after approving fund release:", error);
+    throw new Error(
+      "Error updating job after approving fund release: " +
+        (error as Error).message
+    );
+  }
+}

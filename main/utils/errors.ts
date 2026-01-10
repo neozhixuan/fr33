@@ -14,6 +14,7 @@ export const getFallbackURL = (from: string, error: string) => {
 // Error message upon auth failure
 export const ERROR_TYPE_MAP = {
   UNAUTHORISED: "unauthorised",
+  SESSION_EXPIRED: "session-expired",
   DEFAULT: "default",
   KYC_INCOMPLETE: "kyc-incomplete",
   NEW_USER: "new-user",
@@ -28,6 +29,7 @@ export const getLoginErrorMsg = (
     [ERROR_TYPE_MAP.DEFAULT]: `Unexpected error: ${authorisationError} from ${from}. Try again`,
     [ERROR_TYPE_MAP.KYC_INCOMPLETE]: `You have to complete KYC registration to access ${from}: ${authorisationError}.`,
     [ERROR_TYPE_MAP.NEW_USER]: `Welcome new user! Please login and complete the compliance process to access our ${from}.`,
+    [ERROR_TYPE_MAP.SESSION_EXPIRED]: `Your session has expired while accessing ${from}. Please login again.`,
   };
 
   return (

@@ -27,6 +27,11 @@ export type SmartAccountDetails = Pick<
   "address" | "encryptedSignerKey" | "signerKeyIv"
 >;
 
+export type SmartAccountTransactionResult = {
+  txHash: `0x${string}`;
+  userOpHash: `0x${string}`;
+} & ExecutionResult;
+
 // Misc
 export type ExecutionResult = {
   success: boolean;
@@ -41,3 +46,5 @@ export type JobListingsResult = {
   total: number;
   totalPages: number;
 };
+
+export type JobForClientType = Omit<Job, "amount"> & { amount: number };
