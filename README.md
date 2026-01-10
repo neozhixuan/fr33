@@ -140,6 +140,12 @@ erDiagram
         decimal amount
         string fundedTxHash "nullable"
         timestamp fundedAt "nullable"
+        string acceptTxHash "nullable"
+        timestamp acceptedAt "nullable"
+        string applyReleaseTxHash "nullable"
+        timestamp applyReleaseAt "nullable"
+        string approveReleaseTxHash "nullable"
+        timestamp approveReleaseAt "nullable"
         enum status "POSTED, FUNDED, IN_PROGRESS, PENDING_APPROVAL, COMPLETED, DISPUTED"
         timestamp createdAt
     }
