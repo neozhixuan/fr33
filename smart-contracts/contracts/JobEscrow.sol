@@ -71,7 +71,14 @@ contract JobEscrow {
     */
     function fundJob(uint256 jobId) external payable {
         require(msg.value > 0, "Must send funds");
-        require(jobs[jobId].employer == address(0), "Job already exists");
+
+        Job storage existingJob = jobs[jobId];
+        // Allow funding if job doesn't exist OR was previously cancelled
+        require(
+            existingJob.employer == address(0) ||
+                existingJob.state == JobState.CANCELLED,
+            "Job already exists and is not cancelled"
+        );
 
         jobs[jobId] = Job({
             employer: msg.sender,

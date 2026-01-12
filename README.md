@@ -270,20 +270,6 @@ npm run test
 npm run dev:main
 ```
 
-## Database Setup
-
-Database schema:
-
-```sql
-CREATE TABLE IF NOT EXISTS users (
-  id SERIAL PRIMARY KEY,
-  name TEXT NOT NULL DEFAULT '',
-  email TEXT NOT NULL DEFAULT '',
-  password TEXT NOT NULL DEFAULT '',
-  created_at TIMESTAMPTZ DEFAULT NOW();
-);
-```
-
 ## Debugging issues
 
 You can remove `node_modules` and reinstall necessary libraries in case of conflicting dependencies:

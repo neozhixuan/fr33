@@ -116,8 +116,9 @@ model Job {
   approveReleaseTxHash String?
   approveReleaseAt     DateTime?
 
-  status    JobStatus @default(POSTED)
-  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  status           JobStatus         @default(POSTED)
+  createdAt        DateTime          @default(now()) @db.Timestamptz(6)
+  releaseEvidences ReleaseEvidence[]
 
   @@map("jobs")
   @@schema("app_service")
@@ -153,6 +154,32 @@ model AuditLog {
 enum AuditResult {
   ALLOWED
   BLOCKED
+
+  @@schema("app_service")
+}
+
+model ReleaseEvidence {
+  id    Int @id @default(autoincrement())
+  jobId Int
+
+  type    EvidenceType // TIMESHEET, DELIVERY, etc
+  fileUrl String // S3 path or IPFS hash?
+  notes   String?
+
+  uploadedAt DateTime @db.Timestamptz(6)
+  uploadedBy Int // userId of worker
+
+  job Job @relation(fields: [jobId], references: [id])
+
+  @@map("release_evidence")
+  @@schema("app_service")
+}
+
+enum EvidenceType {
+  TIMESHEET
+  DELIVERY_PROOF
+  INVOICE
+  OTHER
 
   @@schema("app_service")
 }

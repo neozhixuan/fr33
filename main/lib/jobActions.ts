@@ -9,8 +9,14 @@ import {
   updateJobAfterAcceptJob,
   updateJobAfterApplyFundRelease,
   updateJobAfterAcceptFundRelease,
+  deleteJobListing,
+  updateJobAfterRefundPayment,
 } from "@/model/job";
-import { JobListingsResult, SmartAccountTransactionResult } from "@/types";
+import {
+  ExecutionResult,
+  JobListingsResult,
+  SmartAccountTransactionResult,
+} from "@/types";
 import { redirect } from "next/navigation";
 import {
   ESCROW_CONTRACT_ADDRESS,
@@ -21,50 +27,70 @@ import {
 import { sendSmartAccountTransaction, getWalletAddress } from "./aaActions";
 
 /**
- * Shared helper to execute job-related blockchain transactions
- * Handles job validation, contract encoding, transaction execution, and DB updates
+ * Helper function to validate job existence and status
+ * @param jobId - unique ID of job
+ * @param expectedStatus - expected job status or array of statuses
+ * @param employerId - (optional) employer ID to validate ownership
+ * @returns { success: boolean; errorMsg?: string }
  */
-async function executeJobTransaction(params: {
-  jobId: number;
-  userId: number;
-  functionName: string;
-  functionArgs: (string | number | bigint | boolean)[]; // `any` is not allowed
-  expectedStatus: JobStatus | JobStatus[];
-  amount?: bigint;
-  onSuccess: (txHash: string) => Promise<void>;
-}): Promise<SmartAccountTransactionResult> {
-  const {
-    jobId,
-    userId,
-    functionName,
-    functionArgs,
-    expectedStatus,
-    amount,
-    onSuccess,
-  } = params;
-  const fallbackErrorHash = "" as `0x${string}`;
-
+async function validateJobDetails(
+  jobId: number,
+  expectedStatus: JobStatus | JobStatus[],
+  employerId?: number
+): Promise<ExecutionResult> {
   // 1. Get job from DB and validate status
   const job = await getJobDetails(jobId);
-  if (!job) throw new Error("Job not found");
+  if (!job)
+    return {
+      success: false,
+      errorMsg: "Job not found",
+    };
 
   const expectedStatuses = Array.isArray(expectedStatus)
     ? expectedStatus
     : [expectedStatus];
   if (!expectedStatuses.includes(job.status as JobStatus)) {
-    throw new Error(
-      `Job status must be one of: ${expectedStatuses.join(", ")}`
-    );
+    return {
+      success: false,
+      errorMsg: `Invalid job status. Expected: ${expectedStatuses.join(
+        " or "
+      )}, Found: ${job.status}`,
+    };
   }
 
-  // 2. Encode contract function call
+  // Conditional validation (if employerId is provided)
+  if (employerId && job.employerId !== employerId) {
+    return {
+      success: false,
+      errorMsg: "Unauthorized: You are not the employer of this job",
+    };
+  }
+
+  return { success: true };
+}
+
+/**
+ * Shared helper to execute job-related blockchain transactions
+ * Handles job validation, contract encoding, transaction execution, and DB updates
+ */
+async function executeJobTransaction(params: {
+  userId: number;
+  functionName: string;
+  functionArgs: (string | number | bigint | boolean)[]; // `any` is not allowed
+  amount?: bigint;
+  onSuccess: (txHash: string) => Promise<void>;
+}): Promise<SmartAccountTransactionResult> {
+  const { userId, functionName, functionArgs, amount, onSuccess } = params;
+  const fallbackErrorHash = "" as `0x${string}`;
+
+  // 1. Encode contract function call
   const contract = await getContract(getProvider());
   const callData = contract.interface.encodeFunctionData(
     functionName,
     functionArgs
   );
 
-  // 3. Send transaction via smart account
+  // 2. Send transaction via smart account
   let txHashResult: string, userOpHashResult: string;
   try {
     const { txHash, userOpHash, success, errorMsg } =
@@ -89,7 +115,7 @@ async function executeJobTransaction(params: {
     };
   }
 
-  // 4. Update DB with transaction result
+  // 3. Update DB with transaction result
   try {
     await onSuccess(txHashResult);
   } catch (error) {
@@ -175,12 +201,23 @@ export async function fundEscrowAction(params: {
 
   const amountInWei = parseSGDToPolygon(job.amount.toString());
 
-  return executeJobTransaction({
+  const { success, errorMsg } = await validateJobDetails(
     jobId,
+    JobStatus.POSTED
+  );
+  if (!success) {
+    return {
+      success: false,
+      errorMsg,
+      txHash: "" as `0x${string}`,
+      userOpHash: "" as `0x${string}`,
+    };
+  }
+
+  return executeJobTransaction({
     userId: employerId,
     functionName: "fundJob",
     functionArgs: [jobId],
-    expectedStatus: "POSTED",
     amount: amountInWei,
     onSuccess: (txHash) => updateJobAfterFunding(jobId, txHash),
   });
@@ -192,12 +229,23 @@ export async function acceptJobAction(params: {
 }) {
   const { jobId, workerId } = params;
 
-  return executeJobTransaction({
+  const { success, errorMsg } = await validateJobDetails(
     jobId,
+    JobStatus.FUNDED
+  );
+  if (!success) {
+    return {
+      success: false,
+      errorMsg,
+      txHash: "" as `0x${string}`,
+      userOpHash: "" as `0x${string}`,
+    };
+  }
+
+  return executeJobTransaction({
     userId: workerId,
     functionName: "acceptJob",
     functionArgs: [jobId],
-    expectedStatus: "FUNDED",
     onSuccess: async (txHash) => {
       const workerWalletAddress = await getWalletAddress(workerId);
       return updateJobAfterAcceptJob(jobId, workerWalletAddress, txHash);
@@ -211,12 +259,23 @@ export async function applyFundReleaseAction(params: {
 }): Promise<SmartAccountTransactionResult> {
   const { jobId, workerId } = params;
 
-  return executeJobTransaction({
+  const { success, errorMsg } = await validateJobDetails(
     jobId,
+    JobStatus.IN_PROGRESS
+  );
+  if (!success) {
+    return {
+      success: false,
+      errorMsg,
+      txHash: "" as `0x${string}`,
+      userOpHash: "" as `0x${string}`,
+    };
+  }
+
+  return executeJobTransaction({
     userId: workerId,
     functionName: "requestRelease",
     functionArgs: [jobId],
-    expectedStatus: JobStatus.IN_PROGRESS,
     onSuccess: (txHash) => updateJobAfterApplyFundRelease(jobId, txHash),
   });
 }
@@ -227,12 +286,92 @@ export async function acceptFundReleaseAction(params: {
 }): Promise<SmartAccountTransactionResult> {
   const { jobId, employerId } = params;
 
-  return executeJobTransaction({
+  const { success, errorMsg } = await validateJobDetails(
     jobId,
+    JobStatus.PENDING_APPROVAL
+  );
+  if (!success) {
+    return {
+      success: false,
+      errorMsg,
+      txHash: "" as `0x${string}`,
+      userOpHash: "" as `0x${string}`,
+    };
+  }
+
+  return executeJobTransaction({
     userId: employerId,
     functionName: "approveRelease",
     functionArgs: [jobId],
-    expectedStatus: JobStatus.PENDING_APPROVAL,
     onSuccess: (txHash) => updateJobAfterAcceptFundRelease(jobId, txHash),
+  });
+}
+
+export async function deleteJobAction(params: {
+  jobId: number;
+  employerId: number;
+}) {
+  const { jobId, employerId } = params;
+
+  const { success, errorMsg } = await validateJobDetails(
+    jobId,
+    [JobStatus.POSTED, JobStatus.COMPLETED],
+    employerId
+  );
+  if (!success) {
+    return {
+      success: false,
+      errorMsg,
+      txHash: "" as `0x${string}`,
+      userOpHash: "" as `0x${string}`,
+    };
+  }
+
+  // Delete job from DB
+  try {
+    await deleteJobListing(jobId);
+  } catch (error) {
+    console.error("Error deleting job listing:", error);
+    return {
+      success: false,
+      errorMsg: "Error deleting job listing: " + (error as Error).message,
+      txHash: "" as `0x${string}`,
+      userOpHash: "" as `0x${string}`,
+    };
+  }
+
+  // TODO: delete evidence also
+
+  return {
+    success: true,
+    errorMsg: "",
+  };
+}
+
+export async function refundPaymentAction(params: {
+  jobId: number;
+  employerId: number;
+}): Promise<SmartAccountTransactionResult> {
+  const { jobId, employerId } = params;
+
+  const { success, errorMsg } = await validateJobDetails(
+    jobId,
+    [JobStatus.FUNDED, JobStatus.IN_PROGRESS],
+    employerId
+  );
+  if (!success) {
+    return {
+      success: false,
+      errorMsg,
+      txHash: "" as `0x${string}`,
+      userOpHash: "" as `0x${string}`,
+    };
+  }
+
+  return executeJobTransaction({
+    userId: employerId,
+    functionName: "cancelJob",
+    functionArgs: [jobId],
+    onSuccess: () => updateJobAfterRefundPayment(jobId),
   });
 }

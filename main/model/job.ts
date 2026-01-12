@@ -1,6 +1,5 @@
 import { Job, JobStatus } from "@/generated/prisma-client";
 import { prisma } from "@/lib/db";
-import { ESCROW_CONTRACT_ADDRESS } from "@/lib/ether";
 import { JobListingsResult } from "@/types";
 
 export async function createJobListing(
@@ -149,6 +148,35 @@ export async function updateJobAfterAcceptFundRelease(
     throw new Error(
       "Error updating job after approving fund release: " +
         (error as Error).message
+    );
+  }
+}
+
+export async function deleteJobListing(jobId: number) {
+  try {
+    await prisma.job.delete({
+      where: { id: jobId },
+    });
+  } catch (error) {
+    console.error("Error deleting job listing:", error);
+    throw new Error("Error deleting job listing: " + (error as Error).message);
+  }
+}
+
+export async function updateJobAfterRefundPayment(jobId: number) {
+  try {
+    await prisma.job.update({
+      where: { id: jobId },
+      data: {
+        status: JobStatus.POSTED,
+        fundedAt: null,
+        fundedTxHash: null,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating job after refunding payment:", error);
+    throw new Error(
+      "Error updating job after refunding payment: " + (error as Error).message
     );
   }
 }

@@ -29,11 +29,11 @@ export default function ActionForm({
           <p className="text-red-700 text-sm break-words">{state.errorMsg}</p>
         </div>
       )}
-      {state?.success && (
+      {/* {state?.success && (
         <div className="bg-green-50 border border-green-200 rounded p-3">
           <p className="text-green-700 text-sm">{successMessage}</p>
         </div>
-      )}
+      )} */}
     </form>
   );
 }
