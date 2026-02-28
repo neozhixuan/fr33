@@ -42,7 +42,7 @@ graph TB
 
     subgraph "Data Layer"
         USER["User Table"]
-        WALLET["Wallet Table"]
+        WALLETDB["Wallet Table"]
         AUDITLOG["Audit Log Table"]
         VCMETADATA["VC Metadata Table"]
         JOB
@@ -75,9 +75,9 @@ graph TB
     JOB -.validates VC.-> VCMETADATA
     JOB -.validates VC.-> VCREGISTRY
 
-    USER -.has.-> WALLET
+    USER -.has.-> WALLETDB
     USER -.performs.-> AUDITLOG
-    WALLET -.has.-> VCMETADATA
+    WALLETDB -.has.-> VCMETADATA
 
     style POLYGON fill:#8b5cf6
     style ESCROW fill:#8b5cf6
