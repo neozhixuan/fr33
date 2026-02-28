@@ -9,35 +9,35 @@ A blueprint for compliance-aware business-to-consumer blockchain payments in Sin
 ```mermaid
 graph TB
     subgraph "Presentation Layer"
-        WEB[Web Application<br/>Next.js + React]
+        WEB[Web Application\nNext.js + React]
     end
 
     subgraph "Application Layer"
-        WALLET[Wallet Abstraction Service<br/>(Alchemy)]
-        AUTH[Authentication Service<br/>NextAuth]
-        API[API Gateway<br/>Next.js API Routes]
-        JOB[Job Management Service<br/>PostgreSQL]
-        MONITOR[Transaction Monitor<br/>AML/CFT Rules Engine]
+        WALLET[Wallet Abstraction Service\n(Alchemy)]
+        AUTH[Authentication Service\nNextAuth]
+        API[API Gateway\nNext.js API Routes]
+        JOB[Job Management Service\nPostgreSQL]
+        MONITOR[Transaction Monitor\nAML/CFT Rules Engine]
     end
 
     subgraph "Compliance Layer"
-        SINGPASS[Singpass OAuth<br/>Mock/Production]
-        COMPLIANCE[Compliance Microservice<br/>VC Issuer & Verifier]
-        AUDIT[Audit Database<br/>PostgreSQL]
-        REPORTING[Regulatory Reporting<br/>STR Generation]
+        SINGPASS[Singpass OAuth\nMock/Production]
+        COMPLIANCE[Compliance Microservice\nVC Issuer & Verifier]
+        AUDIT[Audit Database\nPostgreSQL]
+        REPORTING[Regulatory Reporting\nSTR Generation]
     end
 
     subgraph "Blockchain Layer"
-        BUNDLER[Bundler<br/>(Alchemy)]
+        BUNDLER[Bundler\n(Alchemy)]
         PAYMASTER[Paymaster for Gas Sponsorship (Alchemy)]
-        ESCROW[JobEscrow Contract<br/>Solidity]
-        POLYGON[Polygon PoS Chain<br/>Layer 2 Network]
-        VCREGISTRY[VcRegistry Contract<br/>Solidity]
+        ESCROW[JobEscrow Contract\nSolidity]
+        POLYGON[Polygon PoS Chain\nLayer 2 Network]
+        VCREGISTRY[VcRegistry Contract\nSolidity]
     end
 
     subgraph "External Systems"
         MAS[MAS Reporting Portal]
-        OFFRAMP[Fiat Off-Ramp<br/>Xfers/Transak]
+        OFFRAMP[Fiat Off-Ramp\nXfers/Transak]
     end
 
     subgraph "Data Layer"
