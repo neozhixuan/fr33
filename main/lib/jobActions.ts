@@ -12,130 +12,14 @@ import {
   deleteJobListing,
   updateJobAfterRefundPayment,
 } from "@/model/job";
-import {
-  ExecutionResult,
-  JobListingsResult,
-  SmartAccountTransactionResult,
-} from "@/types";
+import { JobListingsResult, SmartAccountTransactionResult } from "@/types";
+import { parseSGDToPolygon } from "./ether";
+import { getWalletAddress } from "./aaActions";
+
+import { executeJobTransaction } from "@/utils/aaUtils";
+import { validateJobDetails } from "@/utils/jobUtils";
+
 import { redirect } from "next/navigation";
-import {
-  ESCROW_CONTRACT_ADDRESS,
-  getContract,
-  getProvider,
-  parseSGDToPolygon,
-} from "./ether";
-import { sendSmartAccountTransaction, getWalletAddress } from "./aaActions";
-
-/**
- * Helper function to validate job existence and status
- * @param jobId - unique ID of job
- * @param expectedStatus - expected job status or array of statuses
- * @param employerId - (optional) employer ID to validate ownership
- * @returns { success: boolean; errorMsg?: string }
- */
-async function validateJobDetails(
-  jobId: number,
-  expectedStatus: JobStatus | JobStatus[],
-  employerId?: number
-): Promise<ExecutionResult> {
-  // 1. Get job from DB and validate status
-  const job = await getJobDetails(jobId);
-  if (!job)
-    return {
-      success: false,
-      errorMsg: "Job not found",
-    };
-
-  const expectedStatuses = Array.isArray(expectedStatus)
-    ? expectedStatus
-    : [expectedStatus];
-  if (!expectedStatuses.includes(job.status as JobStatus)) {
-    return {
-      success: false,
-      errorMsg: `Invalid job status. Expected: ${expectedStatuses.join(
-        " or "
-      )}, Found: ${job.status}`,
-    };
-  }
-
-  // Conditional validation (if employerId is provided)
-  if (employerId && job.employerId !== employerId) {
-    return {
-      success: false,
-      errorMsg: "Unauthorized: You are not the employer of this job",
-    };
-  }
-
-  return { success: true };
-}
-
-/**
- * Shared helper to execute job-related blockchain transactions
- * Handles job validation, contract encoding, transaction execution, and DB updates
- */
-async function executeJobTransaction(params: {
-  userId: number;
-  functionName: string;
-  functionArgs: (string | number | bigint | boolean)[]; // `any` is not allowed
-  amount?: bigint;
-  onSuccess: (txHash: string) => Promise<void>;
-}): Promise<SmartAccountTransactionResult> {
-  const { userId, functionName, functionArgs, amount, onSuccess } = params;
-  const fallbackErrorHash = "" as `0x${string}`;
-
-  // 1. Encode contract function call
-  const contract = await getContract(getProvider());
-  const callData = contract.interface.encodeFunctionData(
-    functionName,
-    functionArgs
-  );
-
-  // 2. Send transaction via smart account
-  let txHashResult: string, userOpHashResult: string;
-  try {
-    const { txHash, userOpHash, success, errorMsg } =
-      await sendSmartAccountTransaction(
-        userId,
-        ESCROW_CONTRACT_ADDRESS,
-        callData,
-        amount
-      );
-    if (!success) {
-      throw new Error("Smart account transaction failed: " + errorMsg);
-    }
-    txHashResult = txHash;
-    userOpHashResult = userOpHash;
-  } catch (error) {
-    console.error(`Error executing ${functionName}:`, error);
-    return {
-      success: false,
-      errorMsg: `Error executing ${functionName}: ${(error as Error).message}`,
-      txHash: fallbackErrorHash,
-      userOpHash: fallbackErrorHash,
-    };
-  }
-
-  // 3. Update DB with transaction result
-  try {
-    await onSuccess(txHashResult);
-  } catch (error) {
-    console.error(`Error updating DB after ${functionName}:`, error);
-    return {
-      success: false,
-      errorMsg: `Error updating DB after ${functionName}: ${
-        (error as Error).message
-      }`,
-      txHash: fallbackErrorHash,
-      userOpHash: fallbackErrorHash,
-    };
-  }
-
-  return {
-    success: true,
-    txHash: txHashResult as `0x${string}`,
-    userOpHash: userOpHashResult as `0x${string}`,
-  };
-}
 
 /**
  * Create a job as an employer
@@ -145,7 +29,7 @@ async function executeJobTransaction(params: {
  */
 export async function postingJobAction(
   prevState: string | undefined,
-  formData: FormData
+  formData: FormData,
 ): Promise<string | undefined> {
   try {
     const title = formData.get("title")?.toString() || "";
@@ -173,7 +57,7 @@ export async function postingJobAction(
  */
 export async function getJobListingsAction(
   page: number,
-  pageSize: number
+  pageSize: number,
 ): Promise<JobListingsResult> {
   return getJobListings(page, pageSize);
 }
@@ -203,7 +87,7 @@ export async function fundEscrowAction(params: {
 
   const { success, errorMsg } = await validateJobDetails(
     jobId,
-    JobStatus.POSTED
+    JobStatus.POSTED,
   );
   if (!success) {
     return {
@@ -223,6 +107,11 @@ export async function fundEscrowAction(params: {
   });
 }
 
+/**
+ * A worker accepts a particular job through this action.
+ * @param params - { jobId: number; workerId: number }
+ * @returns
+ */
 export async function acceptJobAction(params: {
   jobId: number;
   workerId: number;
@@ -231,7 +120,7 @@ export async function acceptJobAction(params: {
 
   const { success, errorMsg } = await validateJobDetails(
     jobId,
-    JobStatus.FUNDED
+    JobStatus.FUNDED,
   );
   if (!success) {
     return {
@@ -253,6 +142,11 @@ export async function acceptJobAction(params: {
   });
 }
 
+/**
+ * A worker applies for fund release after completing the job.
+ * @param params - { jobId: number; workerId: number }
+ * @returns
+ */
 export async function applyFundReleaseAction(params: {
   jobId: number;
   workerId: number;
@@ -261,7 +155,7 @@ export async function applyFundReleaseAction(params: {
 
   const { success, errorMsg } = await validateJobDetails(
     jobId,
-    JobStatus.IN_PROGRESS
+    JobStatus.IN_PROGRESS,
   );
   if (!success) {
     return {
@@ -280,6 +174,11 @@ export async function applyFundReleaseAction(params: {
   });
 }
 
+/**
+ * An employer accepts the fund release request from a worker.
+ * @param params - { jobId: number; employerId: number }
+ * @returns
+ */
 export async function acceptFundReleaseAction(params: {
   jobId: number;
   employerId: number;
@@ -288,7 +187,7 @@ export async function acceptFundReleaseAction(params: {
 
   const { success, errorMsg } = await validateJobDetails(
     jobId,
-    JobStatus.PENDING_APPROVAL
+    JobStatus.PENDING_APPROVAL,
   );
   if (!success) {
     return {
@@ -307,6 +206,11 @@ export async function acceptFundReleaseAction(params: {
   });
 }
 
+/**
+ * The employer who created the job deletes the listing, if it is not in progress, or already completed.
+ * @param params - { jobId: number; employerId: number }
+ * @returns
+ */
 export async function deleteJobAction(params: {
   jobId: number;
   employerId: number;
@@ -316,7 +220,7 @@ export async function deleteJobAction(params: {
   const { success, errorMsg } = await validateJobDetails(
     jobId,
     [JobStatus.POSTED, JobStatus.COMPLETED],
-    employerId
+    employerId,
   );
   if (!success) {
     return {
@@ -348,6 +252,11 @@ export async function deleteJobAction(params: {
   };
 }
 
+/**
+ * The employer refunds the payment for a job that is funded, but not in progress.
+ * @param params - { jobId: number; employerId: number }
+ * @returns
+ */
 export async function refundPaymentAction(params: {
   jobId: number;
   employerId: number;
@@ -357,7 +266,7 @@ export async function refundPaymentAction(params: {
   const { success, errorMsg } = await validateJobDetails(
     jobId,
     [JobStatus.FUNDED, JobStatus.IN_PROGRESS],
-    employerId
+    employerId,
   );
   if (!success) {
     return {

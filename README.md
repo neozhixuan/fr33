@@ -263,6 +263,9 @@ npm run build
 6. Run everything
 
 ```sh
+# Ensure that postgres is alive. My postgres username is `postgres`
+psql -U postgres
+
 # Test everything
 npm run test
 

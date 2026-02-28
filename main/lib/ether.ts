@@ -1,3 +1,4 @@
+import { POL_TO_SGD_RATE } from "@/utils/constants";
 import { ethers } from "ethers";
 
 export const ESCROW_CONTRACT_ADDRESS = process.env.ESCROW_CONTRACT_ADDRESS!;
@@ -27,17 +28,17 @@ export function getProvider() {
 }
 
 export async function getContract(
-  signerOrProvider: ethers.Provider | ethers.Signer
+  signerOrProvider: ethers.Provider | ethers.Signer,
 ) {
   try {
     return new ethers.Contract(
       ESCROW_CONTRACT_ADDRESS,
       ESCROW_ABI,
-      signerOrProvider
+      signerOrProvider,
     );
   } catch (error) {
     throw new Error(
-      "Error connecting to JobEscrow contract: " + (error as Error).message
+      "Error connecting to JobEscrow contract: " + (error as Error).message,
     );
   }
 }
@@ -48,10 +49,8 @@ export function getAdminSigner() {
 }
 
 export function parseSGDToPolygon(amountInSGD: string): bigint {
-  // TODO
-  const mockPOLToSGDRate = 6.5721; // 1 SGD = 6.5721 POL
-
+  // TODO: Sync to actual exchange rate
   return ethers.parseEther(
-    (parseFloat(amountInSGD) * mockPOLToSGDRate).toString()
+    (parseFloat(amountInSGD) * POL_TO_SGD_RATE).toString(),
   );
 }

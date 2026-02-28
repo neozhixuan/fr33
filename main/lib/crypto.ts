@@ -11,7 +11,7 @@ const ALGORITHM = "aes-256-gcm";
 export function encryptPrivateKey(privateKey: string) {
   if (!process.env.WALLET_ENCRYPTION_KEY) {
     throw new Error(
-      "[encryptPrivateKey] Missing WALLET_ENCRYPTION_KEY in environment variables"
+      "[encryptPrivateKey] Missing WALLET_ENCRYPTION_KEY in environment variables",
     );
   }
 
@@ -42,7 +42,7 @@ export function encryptPrivateKey(privateKey: string) {
 export function decryptPrivateKey(ciphertext: string, ivHex: string): string {
   if (!process.env.WALLET_ENCRYPTION_KEY) {
     throw new Error(
-      "[decryptPrivateKey] Missing WALLET_ENCRYPTION_KEY in environment variables"
+      "[decryptPrivateKey] Missing WALLET_ENCRYPTION_KEY in environment variables",
     );
   }
 

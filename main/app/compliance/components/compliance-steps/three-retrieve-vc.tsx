@@ -66,7 +66,7 @@ export function RetrieveVCWithCredentialCheckpoint({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          subjectDid: `did:ethr:${walletAddress}`,
+          subjectDid: `did:polygon:${walletAddress}`,
           kycData: {
             uinHash: mockUserInfo.sub,
             nameHash: mockUserInfo.name,
@@ -85,14 +85,14 @@ export function RetrieveVCWithCredentialCheckpoint({
     } catch (error) {
       alert(
         "Failed to fetch from compliance microservice: " +
-          (error as Error).message
+          (error as Error).message,
       );
       return;
     }
 
     if (!data.success) {
       alert(
-        "VC issuance failed from compliance microservice: " + data.errorMsg
+        "VC issuance failed from compliance microservice: " + data.errorMsg,
       );
       return;
     }

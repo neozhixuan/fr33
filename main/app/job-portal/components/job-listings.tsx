@@ -3,6 +3,7 @@
 import { JobStatus } from "@/generated/prisma-client";
 import { JobListingsResult } from "@/types";
 import Button from "@/ui/Button";
+import { POL_TO_SGD_RATE } from "@/utils/constants";
 import { redirect } from "next/navigation";
 
 export function JobListings({
@@ -34,7 +35,11 @@ export function JobListings({
                   Job ID {job.id}: {job.title}
                 </strong>
                 <p>{job.description}</p>
-                <p>Payment: SGD {job.amount.toFixed(2)}</p>
+                <p>
+                  {" "}
+                  Payment: SGD {job.amount.toFixed(2)} / POL{" "}
+                  {(job.amount / POL_TO_SGD_RATE).toFixed(5)}
+                </p>
                 <p>Posted on: {new Date(job.createdAt).toLocaleDateString()}</p>
                 <p>
                   Job Status:{" "}

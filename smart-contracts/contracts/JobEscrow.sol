@@ -43,19 +43,19 @@ contract JobEscrow {
     // Modifiers
     modifier onlyEmployer(uint256 jobId) {
         require(jobs[jobId].employer == msg.sender, "Not employer");
-        _; // TODO
+        _;
     }
     modifier onlyWorker(uint256 jobId) {
         require(jobs[jobId].worker == msg.sender, "Not worker");
-        _; // TODO
+        _;
     }
     modifier onlyAdmin() {
         require(msg.sender == admin, "Not admin");
-        _; // TODO
+        _;
     }
     modifier jobExists(uint256 jobId) {
         require(jobs[jobId].employer != address(0), "Job does not exist");
-        _; // TODO
+        _;
     }
 
     constructor() {

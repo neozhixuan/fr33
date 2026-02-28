@@ -13,7 +13,7 @@ import bcrypt from "bcryptjs";
 export async function createUserAfterPasswordHash(
   email: string,
   password: string,
-  role: UserRole
+  role: UserRole,
 ) {
   const hashedPassword = await bcrypt.hash(password, 10);
   try {
@@ -62,7 +62,7 @@ type UserIsCompliantResult = {
  * @param userId - User's unique ID
  */
 export async function getUserAuthorisationStatus(
-  userId: number
+  userId: number,
 ): Promise<UserIsCompliantResult> {
   try {
     // For the current user, fetch all wallets and their VC metadata
@@ -84,7 +84,7 @@ export async function getUserAuthorisationStatus(
     // Check if any wallet has valid VC
     const isCompliant = user.wallets.some(
       (wallet) =>
-        wallet && wallet.vcMetadata && wallet.vcMetadata.status === "VALID"
+        wallet && wallet.vcMetadata && wallet.vcMetadata.status === "VALID",
     );
     // TODO
     return { user, wallet: user.wallets[0], isCompliant };
@@ -95,7 +95,7 @@ export async function getUserAuthorisationStatus(
 }
 
 export async function getUserOnboardingStatus(
-  userId: number
+  userId: number,
 ): Promise<OnboardingStage | null> {
   try {
     // Fetch the current user's onboarding status
@@ -116,7 +116,7 @@ export async function getUserOnboardingStatus(
 
 export async function updateUserOnboardingStage(
   userId: number,
-  newStage: OnboardingStage
+  newStage: OnboardingStage,
 ): Promise<void> {
   try {
     await prisma.user.update({
@@ -133,7 +133,7 @@ export async function createUserWalletRecord(
   userId: number,
   smartAccountAddress: string,
   encryptedSignerKey: string,
-  signerKeyIv: string
+  signerKeyIv: string,
 ): Promise<void> {
   try {
     await prisma.$transaction(async (tx) => {
@@ -141,7 +141,7 @@ export async function createUserWalletRecord(
         data: {
           userId,
           address: smartAccountAddress,
-          did: `did:ethr:polygon:${smartAccountAddress}`,
+          did: `did:polygon:${smartAccountAddress}`,
           encryptedSignerKey,
           signerKeyIv,
         },
