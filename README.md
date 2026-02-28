@@ -10,14 +10,13 @@ A blueprint for compliance-aware business-to-consumer blockchain payments in Sin
 graph TB
     subgraph "Presentation Layer"
         WEB[Web Application<br/>Next.js + React]
-        MOBILE[Mobile Interface<br/>Progressive Web App]
     end
 
     subgraph "Application Layer"
+        WALLET[Wallet Abstraction Service<br/>(Alchemy)]
         AUTH[Authentication Service<br/>NextAuth]
         API[API Gateway<br/>Next.js API Routes]
         JOB[Job Management Service<br/>PostgreSQL]
-        WALLET[Wallet Abstraction Service<br/>Safe Protocol SDK]
         MONITOR[Transaction Monitor<br/>AML/CFT Rules Engine]
     end
 
@@ -29,16 +28,24 @@ graph TB
     end
 
     subgraph "Blockchain Layer"
-        BUNDLER[Bundler<br/>Pimlico/Alchemy]
-        PAYMASTER[Paymaster<br/>Gas Sponsorship]
+        BUNDLER[Bundler<br/>(Alchemy)]
+        PAYMASTER[Paymaster for Gas Sponsorship (Alchemy)]
         ESCROW[JobEscrow Contract<br/>Solidity]
-        FACTORY[Wallet Factory<br/>Safe Account Abstraction]
         POLYGON[Polygon PoS Chain<br/>Layer 2 Network]
+        VCREGISTRY[VcRegistry Contract<br/>Solidity]
     end
 
     subgraph "External Systems"
         MAS[MAS Reporting Portal]
         OFFRAMP[Fiat Off-Ramp<br/>Xfers/Transak]
+    end
+
+    subgraph "Data Layer"
+        USER[User Table]
+        WALLET[Wallet Table]
+        AUDITLOG[Audit Log Table]
+        VCMETADATA[VC Metadata Table]
+        JOB
     end
 
     WEB --> API
@@ -58,12 +65,19 @@ graph TB
     BUNDLER --> PAYMASTER
     BUNDLER --> POLYGON
 
-    FACTORY -.deploys.-> ESCROW
     ESCROW --> POLYGON
 
     COMPLIANCE --> AUDIT
     REPORTING --> MAS
     WALLET --> OFFRAMP
+
+    COMPLIANCE -.issues VC.-> VCREGISTRY
+    JOB -.validates VC.-> VCMETADATA
+    JOB -.validates VC.-> VCREGISTRY
+
+    USER -.has.-> WALLET
+    USER -.performs.-> AUDITLOG
+    WALLET -.has.-> VCMETADATA
 
     style POLYGON fill:#8b5cf6
     style ESCROW fill:#8b5cf6
@@ -79,7 +93,7 @@ graph TB
 
 2. **Compliance Microservice**
 
-   Acts as a trusted issuer and verifier of VCs, handling KYC verification, credential issuance, verification, and revocation logic.
+   Acts as a trusted issuer and verifier of VCs, handling KYC verification, credential issuance, verification, and revocation logic. Also deploys the cryptographic anchor of the VC on chain for the main service to perform validation.
 
 3. **Blockchain Layer**
 
@@ -159,20 +173,6 @@ erDiagram
         string ipAddress "nullable"
         enum result "ALLOWED, BLOCKED"
         timestamp createdAt
-    }
-```
-
-#### Compliance Microservice (issuer_service schema)
-
-```mermaid
-erDiagram
-    ISSUED_VC {
-        int id PK
-        string vcHash UK
-        string subjectDid
-        timestamp issuedAt
-        timestamp expiresAt
-        enum status "VALID, REVOKED, EXPIRED"
     }
 ```
 
