@@ -49,7 +49,6 @@ graph TB
     end
 
     WEB --> API
-    MOBILE --> API
 
     API --> AUTH
     API --> JOB
@@ -78,6 +77,9 @@ graph TB
     USER -.has.-> WALLETDB
     USER -.performs.-> AUDITLOG
     WALLETDB -.has.-> VCMETADATA
+
+    JOB --> USER
+    JOB --> AUDITLOG
 
     style POLYGON fill:#8b5cf6
     style ESCROW fill:#8b5cf6
