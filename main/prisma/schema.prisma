@@ -6,7 +6,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("POSTGRES_URL")
+  url      = env("NEXT_POSTGRES_URL")
   schemas  = ["app_service"] // Define the schema name here for multi-schema support
 }
 
@@ -74,13 +74,19 @@ enum WalletStatus {
 
 // Indicates whether a wallet is KYC verified (or expired), handled with time-bound verification and revocation handling
 model VCMetadata {
-  id        Int      @id @default(autoincrement())
-  walletId  Int      @unique // Many to one
-  vcHash    String
-  issuedAt  DateTime @db.Timestamptz(6)
+  id       Int @id @default(autoincrement())
+  walletId Int @unique // Many to one
+
+  vcHash String
+  txHash String
+  status VCStatus @default(VALID) // Revocation status
+
+  issuerDid  String
+  subjectDid String
+
+  issuedAt  DateTime @default(now()) @db.Timestamptz(6)
   expiresAt DateTime @db.Timestamptz(6)
-  issuerDid String
-  status    VCStatus @default(VALID)
+  revokedAt DateTime @db.Timestamptz(6)
 
   wallet Wallet @relation(fields: [walletId], references: [id])
 

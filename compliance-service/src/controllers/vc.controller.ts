@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { issueVC } from "../services/vcIssuer.service";
+import { issueVC } from "../services/issuer/vcIssuer.service";
 
 export const issueVCController = async (req: Request, res: Response) => {
   try {

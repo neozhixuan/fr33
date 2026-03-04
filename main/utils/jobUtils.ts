@@ -1,4 +1,4 @@
-import { ExecutionResult } from "@/types";
+import { ExecutionResult } from "@/utils/types";
 import { JobStatus } from "@/generated/prisma-client";
 import { getJobDetails } from "@/model/job";
 

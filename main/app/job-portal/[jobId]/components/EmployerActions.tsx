@@ -7,7 +7,7 @@ import {
   fundEscrowAction,
   refundPaymentAction,
 } from "@/lib/jobActions";
-import { JobForClientType } from "@/types";
+import { JobForClientType } from "@/utils/types";
 import Button from "@/ui/Button";
 import ActionForm from "./ActionForm";
 import ActionStatusCard from "./ActionStatusCard";
@@ -58,7 +58,7 @@ export default function EmployerActions({ job, employerId }: FundJobFormProps) {
 
       return { success, errorMsg };
     },
-    { success: false, errorMsg: "" }
+    { success: false, errorMsg: "" },
   );
 
   const [acceptReleaseState, acceptReleaseAction, isAcceptReleasePending] =
@@ -77,7 +77,7 @@ export default function EmployerActions({ job, employerId }: FundJobFormProps) {
 
         return { success, errorMsg };
       },
-      { success: false, errorMsg: "" }
+      { success: false, errorMsg: "" },
     );
 
   const [deleteJobState, deleteAction, isDeleteJobPending] = useActionState(
@@ -92,7 +92,7 @@ export default function EmployerActions({ job, employerId }: FundJobFormProps) {
 
       return { success, errorMsg };
     },
-    { success: false, errorMsg: "" }
+    { success: false, errorMsg: "" },
   );
 
   const [refundState, refundAction, isRefundPending] = useActionState(
@@ -111,7 +111,7 @@ export default function EmployerActions({ job, employerId }: FundJobFormProps) {
 
       return { success, errorMsg };
     },
-    { success: false, errorMsg: "" }
+    { success: false, errorMsg: "" },
   );
 
   return (

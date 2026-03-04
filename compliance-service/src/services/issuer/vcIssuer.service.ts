@@ -1,31 +1,10 @@
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import { prisma } from "../db/prisma";
+import { IssueVCParams, VCResult } from "../../utils/types";
+import { createVcRegistryTx } from "../blockchain/blockchain.service";
 
 const ISSUER_DID = "did:web:compliance.fr33.sg";
 const VC_TTL_SECONDS = 60 * 60 * 24 * 365; // 1 year
-
-type VCResult = {
-  vc: string;
-  vcHash: string;
-  issuedAt: string;
-  expiresAt: string;
-  issuerDid: string;
-  success: boolean;
-  errorMsg?: string;
-};
-
-type IssueVCParams = {
-  subjectDid: string;
-  kycData: {
-    uinHash: string;
-    nameHash: string;
-    birthdate: string;
-    ageOver: boolean;
-    country: string;
-    verifiedAt: string;
-  };
-};
 
 export async function issueVC(params: IssueVCParams): Promise<VCResult> {
   try {
@@ -46,7 +25,7 @@ export async function issueVC(params: IssueVCParams): Promise<VCResult> {
     // Sign VC as JWT
     const privateKeyBase64 = process.env.VC_SIGNING_PRIVATE_KEY!;
     const privateKeyPEM = Buffer.from(privateKeyBase64, "base64").toString(
-      "utf-8"
+      "utf-8",
     );
 
     const signedVC = jwt.sign(vcPayload, privateKeyPEM, {
@@ -56,20 +35,13 @@ export async function issueVC(params: IssueVCParams): Promise<VCResult> {
     // Hash VC for reference
     const vcHash = crypto.createHash("sha256").update(signedVC).digest("hex");
 
-    // Store metadata only
-    await prisma.issuedVC.create({
-      data: {
-        vcHash,
-        subjectDid: params.subjectDid,
-        issuedAt: new Date(now * 1000),
-        expiresAt: new Date(exp * 1000),
-        status: "VALID",
-      },
-    });
+    // Upload VC data into the blockchain
+    const txHash = await createVcRegistryTx(vcHash, params.subjectDid, exp);
 
     return {
       vc: signedVC,
       vcHash,
+      txHash,
       issuedAt: new Date(now * 1000).toISOString(),
       expiresAt: new Date(exp * 1000).toISOString(),
       issuerDid: ISSUER_DID,
@@ -79,6 +51,7 @@ export async function issueVC(params: IssueVCParams): Promise<VCResult> {
     return {
       vc: "",
       vcHash: "",
+      txHash: "",
       issuedAt: "",
       expiresAt: "",
       issuerDid: "",

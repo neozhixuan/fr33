@@ -2,7 +2,7 @@
 
 import Button from "@/ui/Button";
 import { UserInformation } from "../compliance-content";
-import { IssueVCResponse } from "@/types";
+import { IssueVCResponse } from "@/utils/types";
 import { processVCIssuance } from "@/lib/vcActions";
 import { getWalletAddress } from "@/lib/aaActions";
 import { convertBirthdateToAgeOver } from "@/utils/conv";
@@ -66,7 +66,7 @@ export function RetrieveVCWithCredentialCheckpoint({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          subjectDid: `did:polygon:${walletAddress}`,
+          subjectAddress: walletAddress,
           kycData: {
             uinHash: mockUserInfo.sub,
             nameHash: mockUserInfo.name,
@@ -85,7 +85,7 @@ export function RetrieveVCWithCredentialCheckpoint({
     } catch (error) {
       alert(
         "Failed to fetch from compliance microservice: " +
-          (error as Error).message,
+        (error as Error).message,
       );
       return;
     }

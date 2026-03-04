@@ -1,20 +1,23 @@
 import { prisma } from "@/lib/db";
-import { VCData } from "@/types";
-import { VCStatus } from "@/generated/prisma-client";
+import { VCData } from "@/utils/types";
+import { VCStatus, Wallet } from "@/generated/prisma-client";
 
-export async function createVCMetadata(
+export async function createVCMetadataForWallet(
   vcData: VCData,
-  walletId: number
+  wallet: Wallet,
 ): Promise<void> {
   try {
     await prisma.vCMetadata.create({
       data: {
+        walletId: wallet.id,
         vcHash: vcData.vcHash,
+        txHash: vcData.txHash,
+        status: VCStatus.VALID,
+        issuerDid: vcData.issuerDid,
+        subjectDid: `did:ethr:polygon:${wallet.address}`,
         issuedAt: new Date(vcData.issuedAt),
         expiresAt: new Date(vcData.expiresAt),
-        issuerDid: vcData.issuerDid,
-        status: VCStatus.VALID,
-        walletId,
+        revokedAt: null,
       },
     });
   } catch (error) {

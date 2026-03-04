@@ -1,8 +1,8 @@
 "use server";
 
-import { IssueVCResponse } from "@/types";
+import { IssueVCResponse } from "@/utils/types";
 import { getWalletByUserId } from "@/model/wallet";
-import { createVCMetadata } from "@/model/vc";
+import { createVCMetadataForWallet } from "@/model/vc";
 import { updateUserOnboardingStage } from "@/model/user";
 import { OnboardingStage } from "@/generated/prisma-client";
 
@@ -28,7 +28,7 @@ export async function processVCIssuance(
   }
 
   // Store the issued VC JWT
-  await createVCMetadata(vcResponse, wallet.id);
+  await createVCMetadataForWallet(vcResponse, wallet);
 
   // Update user onboarding stage
   await updateUserOnboardingStage(userId, OnboardingStage.COMPLETED);

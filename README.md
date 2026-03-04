@@ -243,8 +243,8 @@ npm run build
    - Create a `.env` file in the root directory.
    - Add your Polygon testnet RPC URL and private key:
      ```
-     POLYGON_RPC_URL=your_polygon_amoy_rpc_url
-     PRIVATE_KEY=your_private_key
+     NEXT_POLYGON_RPC_URL=your_polygon_amoy_rpc_url
+     NEXT_PRIVATE_KEY=your_private_key
      ```
 
 4. Set up the database:
@@ -252,7 +252,7 @@ npm run build
    - Create a PostgreSQL database.
    - Update the `.env` file with your database connection string:
      ```
-     POSTGRES_URL=your_postgres_connection_string
+     NEXT_POSTGRES_URL=your_postgres_connection_string
      ```
 
 5. Set up Prisma:

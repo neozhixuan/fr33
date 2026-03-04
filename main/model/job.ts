@@ -1,12 +1,12 @@
 import { Job, JobStatus } from "@/generated/prisma-client";
 import { prisma } from "@/lib/db";
-import { JobListingsResult } from "@/types";
+import { JobListingsResult } from "@/utils/types";
 
 export async function createJobListing(
   title: string,
   description: string,
   payment: number,
-  employerId: number
+  employerId: number,
 ) {
   try {
     await prisma.job.create({
@@ -21,14 +21,14 @@ export async function createJobListing(
   } catch (error) {
     console.error("Error creating job listing:", error);
     throw new Error(
-      "Failed to create job listing: " + (error as Error).message
+      "Failed to create job listing: " + (error as Error).message,
     );
   }
 }
 
 export async function getJobListings(
   page: number,
-  pageSize: number
+  pageSize: number,
 ): Promise<JobListingsResult> {
   try {
     const [rows, total] = await Promise.all([
@@ -80,7 +80,7 @@ export async function updateJobAfterFunding(jobId: number, txHash: string) {
   } catch (error) {
     console.error("Error updating job after funding:", error);
     throw new Error(
-      "Error updating job after funding: " + (error as Error).message
+      "Error updating job after funding: " + (error as Error).message,
     );
   }
 }
@@ -88,7 +88,7 @@ export async function updateJobAfterFunding(jobId: number, txHash: string) {
 export async function updateJobAfterAcceptJob(
   jobId: number,
   workerWallet: string,
-  txHash: string
+  txHash: string,
 ) {
   try {
     await prisma.job.update({
@@ -103,14 +103,14 @@ export async function updateJobAfterAcceptJob(
   } catch (error) {
     console.error("Error updating job after acceptance:", error);
     throw new Error(
-      "Error updating job after acceptance: " + (error as Error).message
+      "Error updating job after acceptance: " + (error as Error).message,
     );
   }
 }
 
 export async function updateJobAfterApplyFundRelease(
   jobId: number,
-  txHash: string
+  txHash: string,
 ) {
   try {
     await prisma.job.update({
@@ -125,14 +125,14 @@ export async function updateJobAfterApplyFundRelease(
     console.error("Error updating job after applying for fund release:", error);
     throw new Error(
       "Error updating job after applying for fund release: " +
-        (error as Error).message
+        (error as Error).message,
     );
   }
 }
 
 export async function updateJobAfterAcceptFundRelease(
   jobId: number,
-  txHash: string
+  txHash: string,
 ) {
   try {
     await prisma.job.update({
@@ -147,7 +147,7 @@ export async function updateJobAfterAcceptFundRelease(
     console.error("Error updating job after approving fund release:", error);
     throw new Error(
       "Error updating job after approving fund release: " +
-        (error as Error).message
+        (error as Error).message,
     );
   }
 }
@@ -176,7 +176,7 @@ export async function updateJobAfterRefundPayment(jobId: number) {
   } catch (error) {
     console.error("Error updating job after refunding payment:", error);
     throw new Error(
-      "Error updating job after refunding payment: " + (error as Error).message
+      "Error updating job after refunding payment: " + (error as Error).message,
     );
   }
 }

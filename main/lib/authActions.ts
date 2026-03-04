@@ -8,7 +8,7 @@ import {
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
 import { OnboardingStage, UserRole } from "@/generated/prisma-client";
-import { ExecutionResult } from "@/types";
+import { ExecutionResult } from "@/utils/types";
 
 /**
  * Server action to logout and redirect to specified path
@@ -33,7 +33,7 @@ export async function logoutToHomeAction() {
  */
 export async function authenticateAction(
   prevState: string | undefined,
-  formData: FormData
+  formData: FormData,
 ): Promise<string | undefined> {
   try {
     await signIn("credentials", formData);
@@ -62,7 +62,7 @@ export async function authenticateAction(
  */
 export async function registrationAction(
   prevState: string | undefined,
-  formData: FormData
+  formData: FormData,
 ): Promise<string | undefined> {
   try {
     const email = formData.get("email")?.toString() ?? "";
@@ -94,7 +94,7 @@ export async function registrationAction(
  */
 export async function updateOnboardingStageAction(
   userId: number,
-  newStage: OnboardingStage
+  newStage: OnboardingStage,
 ): Promise<ExecutionResult> {
   try {
     await updateUserOnboardingStage(userId, newStage);

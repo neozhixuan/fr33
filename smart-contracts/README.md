@@ -103,4 +103,4 @@ JobEscrowModule#JobEscrow - 0xf92e8E9b3BE190a4bF7bdcC19e9f10094C712481
 
 If it fails due to pending transactions, can consider using a new wallet and swapping the ADMIN_PRIVATE_KEY to that
 
-Update the ESCROW_CONTRACT_ADDRESS in .env
+Update the NEXT_ESCROW_CONTRACT_ADDRESS in .env

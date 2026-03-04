@@ -1,4 +1,4 @@
-import { SmartAccountTransactionResult } from "@/types";
+import { SmartAccountTransactionResult } from "@/utils/types";
 import { ESCROW_CONTRACT_ADDRESS, getContract, getProvider } from "@/lib/ether";
 import { sendSmartAccountTransaction } from "@/lib/aaActions";
 
