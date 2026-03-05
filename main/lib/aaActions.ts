@@ -9,6 +9,11 @@ import { decryptPrivateKey, encryptPrivateKey } from "./crypto";
 import { getWalletByUserId } from "@/model/wallet";
 import { SmartAccountTransactionResult } from "@/utils/types";
 
+/**
+ * Get the address of a user's wallet by their user ID
+ * @param userId - User's ID
+ * @returns The wallet address associated with the user
+ */
 export async function getWalletAddress(userId: number): Promise<string> {
   const wallet = await getWalletByUserId(userId);
   if (!wallet || !wallet.address) {

@@ -243,7 +243,7 @@ npm run build
    - Create a `.env` file in the root directory.
    - Add your Polygon testnet RPC URL and private key:
      ```
-     NEXT_POLYGON_RPC_URL=your_polygon_amoy_rpc_url
+     POLYGON_RPC_URL=your_polygon_amoy_rpc_url
      NEXT_PRIVATE_KEY=your_private_key
      ```
 

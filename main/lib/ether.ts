@@ -1,8 +1,6 @@
-import { ESCROW_ABI, POL_TO_SGD_RATE } from "@/utils/constants";
+import { POL_TO_SGD_RATE } from "@/utils/constants";
 import { ethers } from "ethers";
 
-export const ESCROW_CONTRACT_ADDRESS =
-  process.env.NEXT_ESCROW_CONTRACT_ADDRESS!;
 const PRIVATE_KEY = process.env.NEXT_ADMIN_PRIVATE_KEY!;
 const RPC_URL = process.env.NEXT_RPC_URL!;
 
@@ -11,17 +9,15 @@ export function getProvider() {
 }
 
 export async function getContract(
+  address: string,
+  abi: ethers.InterfaceAbi,
   signerOrProvider: ethers.Provider | ethers.Signer,
 ) {
   try {
-    return new ethers.Contract(
-      ESCROW_CONTRACT_ADDRESS,
-      ESCROW_ABI,
-      signerOrProvider,
-    );
+    return new ethers.Contract(address, abi, signerOrProvider);
   } catch (error) {
     throw new Error(
-      "Error connecting to JobEscrow contract: " + (error as Error).message,
+      "Error connecting to this contract: " + (error as Error).message,
     );
   }
 }

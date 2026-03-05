@@ -16,6 +16,10 @@ export const issueVCController = async (req: Request, res: Response) => {
     return res.json(result);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "VC issuance failed" });
+    return res
+      .status(500)
+      .json({
+        error: `VC issuance failed due to error: ${(err as Error).message}`,
+      });
   }
 };

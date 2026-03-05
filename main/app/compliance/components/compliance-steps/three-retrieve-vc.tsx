@@ -3,7 +3,7 @@
 import Button from "@/ui/Button";
 import { UserInformation } from "../compliance-content";
 import { IssueVCResponse } from "@/utils/types";
-import { processVCIssuance } from "@/lib/vcActions";
+import { processVcIssuance } from "@/lib/vcActions";
 import { getWalletAddress } from "@/lib/aaActions";
 import { convertBirthdateToAgeOver } from "@/utils/conv";
 
@@ -66,7 +66,7 @@ export function RetrieveVCWithCredentialCheckpoint({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          subjectAddress: walletAddress,
+          subjectDid: `did:polygon:${walletAddress}`,
           kycData: {
             uinHash: mockUserInfo.sub,
             nameHash: mockUserInfo.name,
@@ -99,7 +99,7 @@ export function RetrieveVCWithCredentialCheckpoint({
 
     // 3. Store VC metadata and update onboarding stage via server action
     try {
-      await processVCIssuance(userId, data);
+      await processVcIssuance(userId, data);
     } catch (error) {
       alert("Failed to complete VC issuance: " + (error as Error).message);
       return;

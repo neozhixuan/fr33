@@ -1,4 +1,4 @@
-export const VCRegistryABI = [
+export const VC_REGISTRY_ABI = [
   {
     anonymous: false,
     inputs: [

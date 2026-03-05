@@ -1,6 +1,6 @@
 "use client";
 
-import { JobStatus } from "@/generated/prisma-client";
+import { JobStatus, Wallet } from "@/generated/prisma-client";
 import {
   acceptFundReleaseAction,
   deleteJobAction,
@@ -13,10 +13,13 @@ import ActionForm from "./ActionForm";
 import ActionStatusCard from "./ActionStatusCard";
 import { useActionState, useState } from "react";
 import { redirect } from "next/navigation";
+import { checkIsUserActionAllowed } from "@/lib/vcActions";
+
 
 interface FundJobFormProps {
   job: JobForClientType;
   employerId: number;
+  wallet: Wallet;
 }
 
 type FundedStateType = {
@@ -29,7 +32,7 @@ type ReleaseStateType = {
   releaseTxHash: string;
 };
 
-export default function EmployerActions({ job, employerId }: FundJobFormProps) {
+export default function EmployerActions({ job, employerId, wallet }: FundJobFormProps) {
   const [fundedState, setFundedState] = useState<FundedStateType>({
     fundedAt: job.fundedAt ? new Date(job.fundedAt).toLocaleString() : "N/A",
     fundedTxHash: job.fundedTxHash || "",
@@ -97,6 +100,13 @@ export default function EmployerActions({ job, employerId }: FundJobFormProps) {
 
   const [refundState, refundAction, isRefundPending] = useActionState(
     async () => {
+      const isActionAllowed = await checkIsUserActionAllowed(wallet);
+      if (!isActionAllowed) {
+        alert("You are not authorized to perform this action. Please ensure you have the necessary credentials.");
+        return { success: false, errorMsg: "Unauthorized" };
+      }
+      alert("VC authorised!")
+
       const { success, errorMsg } = await refundPaymentAction({
         jobId: job.id,
         employerId,

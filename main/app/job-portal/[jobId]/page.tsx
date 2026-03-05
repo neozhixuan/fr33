@@ -53,21 +53,24 @@ export default async function JobPage({ params }: JobPageProps) {
         <div className="flex flex-col gap-4 w-[300px] border rounded-lg p-4">
           <strong>Employer Actions</strong>
           {wallet ? (
-            <p className="break-words">
-              Employer wallet:{" "}
-              <a
-                href={`https://amoy.polygonscan.com/address/${wallet.address}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-decoration-line text-blue-900"
-              >
-                {wallet.address}
-              </a>
-            </p>
-          ) : (
+            <>
+
+              <p className="break-words">
+                Employer wallet:{" "}
+                <a
+                  href={`https://amoy.polygonscan.com/address/${wallet.address}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-decoration-line text-blue-900"
+                >
+                  {wallet.address}
+                </a>
+              </p>
+              <EmployerActions job={jobForClient} employerId={userId} wallet={wallet} />
+            </>) : (
             <p>Unexpected Error: No wallet linked</p>
           )}
-          <EmployerActions job={jobForClient} employerId={userId} />
+
         </div>
       )}
 

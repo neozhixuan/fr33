@@ -9,14 +9,14 @@ const ALGORITHM = "aes-256-gcm";
  * @returns { ciphertext: string; iv: string }
  */
 export function encryptPrivateKey(privateKey: string) {
-  if (!process.env.NEXT_.WALLET_ENCRYPTION_KEY) {
+  if (!process.env.NEXT_WALLET_ENCRYPTION_KEY) {
     throw new Error(
       "[encryptPrivateKey] Missing WALLET_ENCRYPTION_KEY in environment variables",
     );
   }
 
   // Build cipher
-  const key = Buffer.from(process.env.NEXT_.WALLET_ENCRYPTION_KEY, "hex");
+  const key = Buffer.from(process.env.NEXT_WALLET_ENCRYPTION_KEY, "hex");
   const iv = crypto.randomBytes(12); // 96-bit IV for GCM
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
 
@@ -40,13 +40,13 @@ export function encryptPrivateKey(privateKey: string) {
  * @returns decryptedKey: string
  */
 export function decryptPrivateKey(ciphertext: string, ivHex: string): string {
-  if (!process.env.NEXT_.WALLET_ENCRYPTION_KEY) {
+  if (!process.env.NEXT_WALLET_ENCRYPTION_KEY) {
     throw new Error(
       "[decryptPrivateKey] Missing WALLET_ENCRYPTION_KEY in environment variables",
     );
   }
 
-  const key = Buffer.from(process.env.NEXT_.WALLET_ENCRYPTION_KEY, "hex");
+  const key = Buffer.from(process.env.NEXT_WALLET_ENCRYPTION_KEY, "hex");
   const data = Buffer.from(ciphertext, "base64");
   const ivBuf = Buffer.from(ivHex, "hex");
 

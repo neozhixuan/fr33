@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import { VCRegistryABI } from "../utils/constants";
+import { VC_REGISTRY_ABI } from "../utils/constants";
 
 const vcRegistryAddress = process.env.VC_REGISTRY_ADDRESS!;
 
@@ -19,7 +19,7 @@ export async function getContract() {
   try {
     return new ethers.Contract(
       vcRegistryAddress,
-      VCRegistryABI,
+      VC_REGISTRY_ABI,
       getIssuerWallet(),
     );
   } catch (error) {
