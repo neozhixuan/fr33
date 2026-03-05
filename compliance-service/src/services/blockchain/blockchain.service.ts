@@ -1,4 +1,4 @@
-import { getContract } from "../../lib/ether";
+import { getVcRegistryContract } from "../../lib/ether";
 
 /**
  * Creates a transaction in the chain, to verify the existing status of a VC.
@@ -12,10 +12,42 @@ export async function createVcRegistryTx(
   subjectAddress: string,
   expiry: number,
 ) {
-  const contract = await getContract();
+  let contract;
+  try {
+    contract = await getVcRegistryContract();
+  } catch (error) {
+    console.error(
+      "Error creating VC registry transaction:",
+      (error as Error).message,
+    );
+    throw new Error(
+      "[createVcRegistryTx] Error getting VC registry contract: " +
+        (error as Error).message,
+    );
+  }
 
-  const tx = await contract.registerCredential(vcHash, subjectAddress, expiry);
+  const subjectAddressParts = subjectAddress.split(":");
+  if (subjectAddressParts.length !== 3) {
+    throw new Error(
+      "Invalid subject DID format. Expected format: did:web:<wallet_address>",
+    );
+  }
+  const subjectWalletAddress = subjectAddressParts[2];
 
+  let tx;
+  try {
+    console.log(vcHash, subjectWalletAddress, expiry);
+    tx = await contract.registerCredential(
+      vcHash as string, // Pass vcHash as a string directly
+      subjectWalletAddress,
+      expiry,
+    );
+  } catch (error) {
+    console.error("Error registering VC:", (error as Error).message);
+    throw new Error(
+      "[createVcRegistryTx] Error registering VC: " + (error as Error).message,
+    );
+  }
   const receipt = await tx.wait();
 
   return receipt.hash;

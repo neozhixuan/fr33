@@ -86,9 +86,9 @@ export const VC_REGISTRY_ABI = [
   {
     inputs: [
       {
-        internalType: "bytes32",
+        internalType: "string",
         name: "vcHash",
-        type: "bytes32",
+        type: "string",
       },
       {
         internalType: "address",
@@ -110,9 +110,9 @@ export const VC_REGISTRY_ABI = [
   {
     inputs: [
       {
-        internalType: "bytes32",
+        internalType: "string",
         name: "vcHash",
-        type: "bytes32",
+        type: "string",
       },
       {
         internalType: "address",
@@ -133,9 +133,9 @@ export const VC_REGISTRY_ABI = [
   {
     inputs: [
       {
-        internalType: "bytes32",
+        internalType: "string",
         name: "vcHash",
-        type: "bytes32",
+        type: "string",
       },
     ],
     name: "revokeCredential",

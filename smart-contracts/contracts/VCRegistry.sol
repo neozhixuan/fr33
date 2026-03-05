@@ -20,7 +20,7 @@ contract VCRegistry {
 
     event VCRevoked(bytes32 indexed vcHash, address indexed issuer);
 
-    // todo: external
+    // todo: external, memory
     /**
      * Register a VC into the on-chain registry.
      * @param vcHash Hash of the VC.
@@ -28,20 +28,24 @@ contract VCRegistry {
      * @param expiresAt A timestamp where the VC will be usable until.
      */
     function registerCredential(
-        bytes32 vcHash,
+        string memory vcHash,
         address subject,
         uint256 expiresAt
     ) external {
-        require(credentials[vcHash].issuer == address(0), "VC already exists");
+        bytes memory vcHashBytes = bytes(vcHash); // Convert string to bytes for storage
+        require(
+            credentials[keccak256(vcHashBytes)].issuer == address(0),
+            "VC already exists"
+        );
 
-        credentials[vcHash] = Credential({
+        credentials[keccak256(vcHashBytes)] = Credential({
             subject: subject,
             issuer: msg.sender,
             expiresAt: expiresAt,
             isRevoked: false
         });
 
-        emit VCIssued(vcHash, subject, msg.sender, expiresAt);
+        emit VCIssued(keccak256(vcHashBytes), subject, msg.sender, expiresAt); // Emit event with hash
     }
 
     // todo: storage
@@ -49,15 +53,15 @@ contract VCRegistry {
      * Check if vc is valid.
      * @param vcHash Hash of the VC.
      */
-    function revokeCredential(bytes32 vcHash) external {
-        Credential storage credential = credentials[vcHash];
+    function revokeCredential(string memory vcHash) external {
+        Credential storage credential = credentials[keccak256(bytes(vcHash))];
 
         require(credential.issuer == msg.sender, "Only issuer can revoke");
         require(!credential.isRevoked, "VC already revoked");
 
         credential.isRevoked = true;
 
-        emit VCRevoked(vcHash, msg.sender);
+        emit VCRevoked(keccak256(bytes(vcHash)), msg.sender);
     }
 
     /**
@@ -66,10 +70,10 @@ contract VCRegistry {
      * @param subject The address of the wallet that this VC belongs to.
      */
     function isValid(
-        bytes32 vcHash,
+        string memory vcHash,
         address subject
     ) external view returns (bool) {
-        Credential memory credential = credentials[vcHash];
+        Credential memory credential = credentials[keccak256(bytes(vcHash))];
 
         if (credential.subject != subject) return false; // Subject mismatch
         if (credential.issuer == address(0)) return false; // VC does not exist

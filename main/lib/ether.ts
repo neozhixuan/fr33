@@ -4,10 +4,21 @@ import { ethers } from "ethers";
 const PRIVATE_KEY = process.env.NEXT_ADMIN_PRIVATE_KEY!;
 const RPC_URL = process.env.NEXT_RPC_URL!;
 
+/**
+ * Utilise the Polygon development network.
+ * Returns a Provider which can only make read-only calls to blockchain.
+ */
 export function getProvider() {
   return new ethers.JsonRpcProvider(RPC_URL);
 }
 
+/**
+ * Generic function to fetch any contract given the address, abi and signer or provider.
+ * @param address Address of contract
+ * @param abi ABI of contract
+ * @param signerOrProvider Signer or provider to use for the contract
+ * @returns Promise resolving to the contract instance
+ */
 export async function getContract(
   address: string,
   abi: ethers.InterfaceAbi,
@@ -20,11 +31,6 @@ export async function getContract(
       "Error connecting to this contract: " + (error as Error).message,
     );
   }
-}
-
-export function getAdminSigner() {
-  const provider = getProvider();
-  return new ethers.Wallet(PRIVATE_KEY, provider);
 }
 
 export function parseSGDToPolygon(amountInSGD: string): bigint {

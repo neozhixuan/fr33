@@ -16,6 +16,9 @@ CREATE TYPE "app_service"."JobStatus" AS ENUM ('POSTED', 'FUNDED', 'IN_PROGRESS'
 -- CreateEnum
 CREATE TYPE "app_service"."AuditResult" AS ENUM ('ALLOWED', 'BLOCKED');
 
+-- CreateEnum
+CREATE TYPE "app_service"."EvidenceType" AS ENUM ('TIMESHEET', 'DELIVERY_PROOF', 'INVOICE', 'OTHER');
+
 -- CreateTable
 CREATE TABLE "app_service"."users" (
     "id" SERIAL NOT NULL,
@@ -49,10 +52,13 @@ CREATE TABLE "app_service"."vc_metadata" (
     "id" SERIAL NOT NULL,
     "walletId" INTEGER NOT NULL,
     "vcHash" TEXT NOT NULL,
-    "issuedAt" TIMESTAMPTZ(6) NOT NULL,
-    "expiresAt" TIMESTAMPTZ(6) NOT NULL,
-    "issuerDid" TEXT NOT NULL,
+    "txHash" TEXT NOT NULL,
     "status" "app_service"."VCStatus" NOT NULL DEFAULT 'VALID',
+    "issuerDid" TEXT NOT NULL,
+    "subjectDid" TEXT NOT NULL,
+    "issuedAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiresAt" TIMESTAMPTZ(6) NOT NULL,
+    "revokedAt" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "vc_metadata_pkey" PRIMARY KEY ("id")
 );
@@ -65,7 +71,14 @@ CREATE TABLE "app_service"."jobs" (
     "title" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "amount" DECIMAL(65,30) NOT NULL,
-    "escrowAddress" TEXT NOT NULL,
+    "fundedTxHash" TEXT,
+    "fundedAt" TIMESTAMP(3),
+    "acceptTxHash" TEXT,
+    "acceptedAt" TIMESTAMP(3),
+    "applyReleaseTxHash" TEXT,
+    "applyReleaseAt" TIMESTAMP(3),
+    "approveReleaseTxHash" TEXT,
+    "approveReleaseAt" TIMESTAMP(3),
     "status" "app_service"."JobStatus" NOT NULL DEFAULT 'POSTED',
     "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -84,6 +97,19 @@ CREATE TABLE "app_service"."audit_logs" (
     "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "audit_logs_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "app_service"."release_evidence" (
+    "id" SERIAL NOT NULL,
+    "jobId" INTEGER NOT NULL,
+    "type" "app_service"."EvidenceType" NOT NULL,
+    "fileUrl" TEXT NOT NULL,
+    "notes" TEXT,
+    "uploadedAt" TIMESTAMPTZ(6) NOT NULL,
+    "uploadedBy" INTEGER NOT NULL,
+
+    CONSTRAINT "release_evidence_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -106,3 +132,6 @@ ALTER TABLE "app_service"."vc_metadata" ADD CONSTRAINT "vc_metadata_walletId_fke
 
 -- AddForeignKey
 ALTER TABLE "app_service"."audit_logs" ADD CONSTRAINT "audit_logs_userId_fkey" FOREIGN KEY ("userId") REFERENCES "app_service"."users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "app_service"."release_evidence" ADD CONSTRAINT "release_evidence_jobId_fkey" FOREIGN KEY ("jobId") REFERENCES "app_service"."jobs"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
