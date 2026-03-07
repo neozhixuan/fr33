@@ -1,22 +1,25 @@
 "use client";
 
-import { JobStatus } from "@/generated/prisma-client";
+import { JobStatus, Wallet } from "@/generated/prisma-client";
 import {
   acceptFundReleaseAction,
   deleteJobAction,
   fundEscrowAction,
   refundPaymentAction,
 } from "@/lib/jobActions";
-import { JobForClientType } from "@/types";
+import { JobForClientType } from "@/utils/types";
 import Button from "@/ui/Button";
 import ActionForm from "./ActionForm";
 import ActionStatusCard from "./ActionStatusCard";
 import { useActionState, useState } from "react";
 import { redirect } from "next/navigation";
+import { checkIsUserActionAllowed } from "@/lib/vcActions";
+
 
 interface FundJobFormProps {
   job: JobForClientType;
   employerId: number;
+  wallet: Wallet;
 }
 
 type FundedStateType = {
@@ -29,7 +32,7 @@ type ReleaseStateType = {
   releaseTxHash: string;
 };
 
-export default function EmployerActions({ job, employerId }: FundJobFormProps) {
+export default function EmployerActions({ job, employerId, wallet }: FundJobFormProps) {
   const [fundedState, setFundedState] = useState<FundedStateType>({
     fundedAt: job.fundedAt ? new Date(job.fundedAt).toLocaleString() : "N/A",
     fundedTxHash: job.fundedTxHash || "",
@@ -45,6 +48,12 @@ export default function EmployerActions({ job, employerId }: FundJobFormProps) {
 
   const [state, fundAction, isFundEscrowPending] = useActionState(
     async () => {
+      const isActionAllowed = await checkIsUserActionAllowed(wallet);
+      if (!isActionAllowed) {
+        alert("You are not compliant with the requirements to fund the escrow. Please ensure you have the necessary credentials and try again.");
+        return { success: false, errorMsg: "You are not allowed to fund the escrow." };
+      }
+
       const { success, errorMsg, txHash } = await fundEscrowAction({
         jobId: job.id,
         employerId,
@@ -58,12 +67,18 @@ export default function EmployerActions({ job, employerId }: FundJobFormProps) {
 
       return { success, errorMsg };
     },
-    { success: false, errorMsg: "" }
+    { success: false, errorMsg: "" },
   );
 
   const [acceptReleaseState, acceptReleaseAction, isAcceptReleasePending] =
     useActionState(
       async () => {
+        const isActionAllowed = await checkIsUserActionAllowed(wallet);
+        if (!isActionAllowed) {
+          alert("You are not compliant with the requirements to approve fund release. Please ensure you have the necessary credentials and try again.");
+          return { success: false, errorMsg: "You are not allowed to approve fund release." };
+        }
+
         const { success, errorMsg, txHash } = await acceptFundReleaseAction({
           jobId: job.id,
           employerId,
@@ -77,11 +92,17 @@ export default function EmployerActions({ job, employerId }: FundJobFormProps) {
 
         return { success, errorMsg };
       },
-      { success: false, errorMsg: "" }
+      { success: false, errorMsg: "" },
     );
 
   const [deleteJobState, deleteAction, isDeleteJobPending] = useActionState(
     async () => {
+      const isActionAllowed = await checkIsUserActionAllowed(wallet);
+      if (!isActionAllowed) {
+        alert("You are not compliant with the requirements to delete a job. Please ensure you have the necessary credentials and try again.");
+        return { success: false, errorMsg: "You are not allowed to delete a job." };
+      }
+
       const { success, errorMsg } = await deleteJobAction({
         jobId: job.id,
         employerId,
@@ -92,11 +113,17 @@ export default function EmployerActions({ job, employerId }: FundJobFormProps) {
 
       return { success, errorMsg };
     },
-    { success: false, errorMsg: "" }
+    { success: false, errorMsg: "" },
   );
 
   const [refundState, refundAction, isRefundPending] = useActionState(
     async () => {
+      const isActionAllowed = await checkIsUserActionAllowed(wallet);
+      if (!isActionAllowed) {
+        alert("You are not authorized to refund the payment. Please ensure you have the necessary credentials.");
+        return { success: false, errorMsg: "You are not authorized to refund the payment." };
+      }
+
       const { success, errorMsg } = await refundPaymentAction({
         jobId: job.id,
         employerId,
@@ -111,7 +138,7 @@ export default function EmployerActions({ job, employerId }: FundJobFormProps) {
 
       return { success, errorMsg };
     },
-    { success: false, errorMsg: "" }
+    { success: false, errorMsg: "" },
   );
 
   return (

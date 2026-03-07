@@ -11,6 +11,8 @@ npx hardhat compile
     - Generate ABI and Bytecode
     - No interaction with chain
 
+TLDR: Creates /artifacts and /cache
+
 2. Start localhost chain
 
 ```sh
@@ -31,6 +33,7 @@ Private Key: 0xac0974bec39a17e36ba4a6b4...
 
 ```sh
 npx hardhat ignition deploy ignition/modules/JobEscrow.ts
+npx hardhat ignition deploy ignition/modules/VCRegistry.ts
 ```
 
 ```sh
@@ -77,7 +80,12 @@ rm -rf ./ignition/deployments/chain-80002
 
 ```sh
 npm run deploy:polygonAmoy
+# or
+npx hardhat ignition deploy ignition/modules/JobEscrow.ts --network polygonAmoy
+npx hardhat ignition deploy ignition/modules/VCRegistry.ts --network polygonAmoy
 ```
+
+TLDR: Creates the /deployments folder
 
 ```sh
 > smart-contracts@1.0.0 deploy:polygonAmoy
@@ -101,6 +109,9 @@ Deployed Addresses
 JobEscrowModule#JobEscrow - 0xf92e8E9b3BE190a4bF7bdcC19e9f10094C712481
 ```
 
-If it fails due to pending transactions, can consider using a new wallet and swapping the ADMIN_PRIVATE_KEY to that
+3. Remember to update the ABIs (TODO: shld be more effecient..)
 
-Update the ESCROW_CONTRACT_ADDRESS in .env
+4. Debug
+
+- If it fails due to pending transactions, can consider using a new wallet and swapping the ADMIN_PRIVATE_KEY to that
+- Update the NEXT_ESCROW_CONTRACT_ADDRESS in .env

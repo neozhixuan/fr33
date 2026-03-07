@@ -4,10 +4,16 @@ import { LocalAccountSigner, polygonAmoy } from "@alchemy/aa-core";
 import { createModularAccountAlchemyClient } from "@alchemy/aa-alchemy";
 import { generatePrivateKey } from "viem/accounts";
 import { createUserWalletRecord } from "@/model/user";
-import { SmartAccountDetails, ExecutionResult } from "@/types";
+import { SmartAccountDetails, ExecutionResult } from "@/utils/types";
 import { decryptPrivateKey, encryptPrivateKey } from "./crypto";
 import { getWalletByUserId } from "@/model/wallet";
-import { SmartAccountTransactionResult } from "@/types";
+import { SmartAccountTransactionResult } from "@/utils/types";
+
+/**
+ * Get the address of a user's wallet by their user ID
+ * @param userId - User's ID
+ * @returns The wallet address associated with the user
+ */
 export async function getWalletAddress(userId: number): Promise<string> {
   const wallet = await getWalletByUserId(userId);
   if (!wallet || !wallet.address) {
@@ -20,7 +26,7 @@ export async function getWalletAddress(userId: number): Promise<string> {
  * Creates a smart account for the user and updates the database accordingly.
  */
 export const createWallet = async (
-  userId: number
+  userId: number,
 ): Promise<ExecutionResult> => {
   // 1. Get smart account address, fail fast if error
   let smartAccountDetails: SmartAccountDetails | null = null;
@@ -28,7 +34,7 @@ export const createWallet = async (
     smartAccountDetails = await createSmartAccount();
     if (!smartAccountDetails) {
       throw new Error(
-        "[CreateWallet] Smart account creation returned null details"
+        "[CreateWallet] Smart account creation returned null details",
       );
     }
   } catch (error) {
@@ -45,7 +51,7 @@ export const createWallet = async (
       userId,
       smartAccountDetails.address,
       smartAccountDetails.encryptedSignerKey,
-      smartAccountDetails.signerKeyIv
+      smartAccountDetails.signerKeyIv,
     );
   } catch (error) {
     console.log("[CreateWallet] Error updating user and wallet record:", error);
@@ -64,18 +70,6 @@ export const createWallet = async (
  * Returns both the smart account address and the owner's private key
  */
 export async function createSmartAccount(): Promise<SmartAccountDetails> {
-  if (!process.env.ALCHEMY_API_KEY) {
-    throw new Error(
-      "[createSmartAccount] Missing ALCHEMY_API_KEY in environment variables"
-    );
-  }
-
-  if (!process.env.ALCHEMY_GAS_POLICY_ID) {
-    throw new Error(
-      "[createSmartAccount] Missing ALCHEMY_GAS_POLICY_ID in environment variables"
-    );
-  }
-
   // Generate a new EOA private key for this user
   // TODO: Replace with deterministic key derivation from user credentials
   const ownerPrivateKey = generatePrivateKey();
@@ -85,18 +79,18 @@ export async function createSmartAccount(): Promise<SmartAccountDetails> {
 
   // Create the Alchemy client with Modular Account and Gas Manager (paymaster)
   const client = await createModularAccountAlchemyClient({
-    apiKey: process.env.ALCHEMY_API_KEY,
+    apiKey: process.env.NEXT_ALCHEMY_API_KEY!,
     chain: polygonAmoy,
     signer,
     gasManagerConfig: {
-      policyId: process.env.ALCHEMY_GAS_POLICY_ID, // Smart account will be automatically deployed on first transaction
+      policyId: process.env.NEXT_ALCHEMY_GAS_POLICY_ID!, // Smart account will be automatically deployed on first transaction
     },
   });
   const smartAccountAddress = client.getAddress();
 
   console.log(
     "[createSmartAccount] Smart Account created:",
-    smartAccountAddress
+    smartAccountAddress,
   );
   console.log("[createSmartAccount] Owner EOA:", await signer.getAddress());
 
@@ -126,30 +120,19 @@ async function getSmartAccountClient(userId: number) {
     // Recreate the signer by decrypting the private key
     const signerPrivateKey = decryptPrivateKey(
       wallet.encryptedSignerKey,
-      wallet.signerKeyIv
+      wallet.signerKeyIv,
     );
     const signer = LocalAccountSigner.privateKeyToAccountSigner(
-      signerPrivateKey as `0x${string}`
+      signerPrivateKey as `0x${string}`,
     );
-
-    if (!process.env.ALCHEMY_API_KEY) {
-      throw new Error(
-        "[createSmartAccount] Missing ALCHEMY_API_KEY in environment variables"
-      );
-    }
-    if (!process.env.ALCHEMY_GAS_POLICY_ID) {
-      throw new Error(
-        "[createSmartAccount] Missing ALCHEMY_GAS_POLICY_ID in environment variables"
-      );
-    }
 
     // Generate the client that controls this smart wallet
     const client = await createModularAccountAlchemyClient({
-      apiKey: process.env.ALCHEMY_API_KEY,
+      apiKey: process.env.NEXT_ALCHEMY_API_KEY!,
       chain: polygonAmoy,
       signer,
       gasManagerConfig: {
-        policyId: process.env.ALCHEMY_GAS_POLICY_ID,
+        policyId: process.env.NEXT_ALCHEMY_GAS_POLICY_ID!,
       },
     });
 
@@ -157,7 +140,7 @@ async function getSmartAccountClient(userId: number) {
   } catch (error) {
     console.error("Error getting smart account client:", error);
     throw new Error(
-      "Error getting smart account client: " + (error as Error).message
+      "Error getting smart account client: " + (error as Error).message,
     );
   }
 }
@@ -174,7 +157,7 @@ export async function sendSmartAccountTransaction(
   userId: number,
   to: string,
   data: string,
-  value?: bigint
+  value?: bigint,
 ): Promise<SmartAccountTransactionResult> {
   const { client } = await getSmartAccountClient(userId);
 

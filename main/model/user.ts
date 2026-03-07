@@ -141,7 +141,7 @@ export async function createUserWalletRecord(
         data: {
           userId,
           address: smartAccountAddress,
-          did: `did:polygon:${smartAccountAddress}`,
+          did: `did:ethr:polygon:amoy:${smartAccountAddress}`,
           encryptedSignerKey,
           signerKeyIv,
         },

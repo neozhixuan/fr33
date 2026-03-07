@@ -1,6 +1,10 @@
-import { SmartAccountTransactionResult } from "@/types";
-import { ESCROW_CONTRACT_ADDRESS, getContract, getProvider } from "@/lib/ether";
+import { SmartAccountTransactionResult } from "@/utils/types";
+import { getContract, getProvider } from "@/lib/ether";
 import { sendSmartAccountTransaction } from "@/lib/aaActions";
+import { ESCROW_ABI } from "./constants";
+
+export const ESCROW_CONTRACT_ADDRESS =
+  process.env.NEXT_ESCROW_CONTRACT_ADDRESS!;
 
 /**
  * Shared helper to execute job-related blockchain transactions
@@ -17,7 +21,11 @@ export async function executeJobTransaction(params: {
   const fallbackErrorHash = "" as `0x${string}`;
 
   // 1. Encode contract function call
-  const contract = await getContract(getProvider());
+  const contract = await getContract(
+    ESCROW_CONTRACT_ADDRESS,
+    ESCROW_ABI,
+    getProvider(),
+  );
   const callData = contract.interface.encodeFunctionData(
     functionName,
     functionArgs,

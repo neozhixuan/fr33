@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build": "npx hardhat compile",
+    "build": "npx hardhat compile && node scripts/export-abis.mjs",
+    "export-abis": "node scripts/export-abis.mjs",
     "test": "npx hardhat test",
     "dev": "npx hardhat node",
     "deploy:local": "npx hardhat ignition deploy ignition/modules/JobEscrow.ts --network localhost",

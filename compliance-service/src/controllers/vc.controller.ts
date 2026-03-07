@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { issueVC } from "../services/vcIssuer.service";
+import { issueVC } from "../services/issuer/vcIssuer.service";
 
 export const issueVCController = async (req: Request, res: Response) => {
   try {
@@ -16,6 +16,10 @@ export const issueVCController = async (req: Request, res: Response) => {
     return res.json(result);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "VC issuance failed" });
+    return res
+      .status(500)
+      .json({
+        error: `VC issuance failed due to error: ${(err as Error).message}`,
+      });
   }
 };

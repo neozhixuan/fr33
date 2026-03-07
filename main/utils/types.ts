@@ -14,6 +14,7 @@ export type KycDataDTO = {
 export type VCData = {
   vc: string;
   vcHash: string;
+  txHash: string;
   issuedAt: string;
   expiresAt: string;
   issuerDid: string;

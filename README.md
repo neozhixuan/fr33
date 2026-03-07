@@ -198,6 +198,16 @@ erDiagram
 
    Stores each action performed by a specific user.
 
+### Decentralised Authentication Design
+
+Users will have to register for an account.
+
+- Through the KYC process, a Verifiable Credential transaction is created in the Polygon Amoy testnet for.
+
+Users will then be authenticated upon each gated action.
+
+- The backend will make a call to the smart contract to verify that the Verifiable Credential is not revoked.
+
 ## Setup
 
 ### Prerequisites:

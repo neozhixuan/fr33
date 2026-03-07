@@ -3,12 +3,20 @@
 import { signIn, signOut } from "@/server/auth";
 import {
   createUserAfterPasswordHash,
+  getUserAuthorisationStatus,
   updateUserOnboardingStage,
 } from "@/model/user";
-import { AuthError } from "next-auth";
+import { AuthError, User } from "next-auth";
 import { redirect } from "next/navigation";
-import { OnboardingStage, UserRole } from "@/generated/prisma-client";
-import { ExecutionResult } from "@/types";
+import { ExecutionResult } from "@/utils/types";
+import {
+  OnboardingStage,
+  UserRole,
+  User as DBUser,
+  Wallet,
+} from "@/generated/prisma-client";
+import { stringToInt } from "@/utils/conv";
+import { ERROR_TYPE_MAP, getFallbackURL } from "@/utils/errors";
 
 /**
  * Server action to logout and redirect to specified path
@@ -33,7 +41,7 @@ export async function logoutToHomeAction() {
  */
 export async function authenticateAction(
   prevState: string | undefined,
-  formData: FormData
+  formData: FormData,
 ): Promise<string | undefined> {
   try {
     await signIn("credentials", formData);
@@ -62,7 +70,7 @@ export async function authenticateAction(
  */
 export async function registrationAction(
   prevState: string | undefined,
-  formData: FormData
+  formData: FormData,
 ): Promise<string | undefined> {
   try {
     const email = formData.get("email")?.toString() ?? "";
@@ -94,7 +102,7 @@ export async function registrationAction(
  */
 export async function updateOnboardingStageAction(
   userId: number,
-  newStage: OnboardingStage
+  newStage: OnboardingStage,
 ): Promise<ExecutionResult> {
   try {
     await updateUserOnboardingStage(userId, newStage);
@@ -106,4 +114,35 @@ export async function updateOnboardingStageAction(
       errorMsg: error instanceof Error ? error.message : "Unknown error",
     };
   }
+}
+
+/**
+ * Redirects unauthorised users to the appropriate fallback URL.
+ * Server component (runs on Node runtime) - Block SSR if auth doesn't pass
+ */
+export async function ensureAuthorisedAndCompliantUser(
+  sessionUser: User,
+): Promise<{ user: DBUser; wallet: Wallet | undefined }> {
+  if (!sessionUser.id) {
+    throw new Error(
+      "User ID is missing in session: " + JSON.stringify(sessionUser),
+    );
+  }
+  const userId = stringToInt(sessionUser.id as string);
+  const { user, wallet, isCompliant } = await getUserAuthorisationStatus(
+    userId,
+  );
+  if (!user) {
+    // Session user is no longer valid
+    const target = getFallbackURL("job-portal", ERROR_TYPE_MAP.UNAUTHORISED);
+    // Redirect to a Route Handler that clears cookies then redirects
+    redirect(`/api/logout?redirectTo=${encodeURIComponent(target)}`);
+  }
+
+  if (!isCompliant) {
+    // Session user needs to complete compliance
+    redirect("/compliance");
+  }
+
+  return { user, wallet };
 }

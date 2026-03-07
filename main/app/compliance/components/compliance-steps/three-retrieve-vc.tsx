@@ -2,10 +2,12 @@
 
 import Button from "@/ui/Button";
 import { UserInformation } from "../compliance-content";
-import { IssueVCResponse } from "@/types";
-import { processVCIssuance } from "@/lib/vcActions";
+import { IssueVCResponse } from "@/utils/types";
+import { processVcIssuance } from "@/lib/vcActions";
 import { getWalletAddress } from "@/lib/aaActions";
 import { convertBirthdateToAgeOver } from "@/utils/conv";
+import { Spinner } from "@/ui/Spinner";
+import { useState } from "react";
 
 export function RetrieveVCWithCredentialCheckpoint({
   authorizationCode,
@@ -18,8 +20,12 @@ export function RetrieveVCWithCredentialCheckpoint({
   userId: number;
   onSuccess: () => void;
 }) {
+  const [isLoading, setIsLoading] = useState(false);
+
   // TODO: Rollback and improve
   const handleGetInformation = async () => {
+    setIsLoading(true);
+
     if (!authorizationCode || !state) {
       alert("Missing authorization code or state");
       return;
@@ -56,6 +62,7 @@ export function RetrieveVCWithCredentialCheckpoint({
       walletAddress = await getWalletAddress(userId);
     } catch (error) {
       alert("Failed to fetch wallet: " + (error as Error).message);
+      setIsLoading(false);
       return;
     }
 
@@ -66,7 +73,7 @@ export function RetrieveVCWithCredentialCheckpoint({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          subjectDid: `did:polygon:${walletAddress}`,
+          subjectDid: `did:ethr:polygon:amoy:${walletAddress}`,
           kycData: {
             uinHash: mockUserInfo.sub,
             nameHash: mockUserInfo.name,
@@ -79,14 +86,16 @@ export function RetrieveVCWithCredentialCheckpoint({
       });
       if (!res.ok) {
         alert("Failed to issue VC: " + (await res.text()));
+        setIsLoading(false);
         return;
       }
       data = await res.json();
     } catch (error) {
       alert(
         "Failed to fetch from compliance microservice: " +
-          (error as Error).message,
+        (error as Error).message,
       );
+      setIsLoading(false);
       return;
     }
 
@@ -94,14 +103,16 @@ export function RetrieveVCWithCredentialCheckpoint({
       alert(
         "VC issuance failed from compliance microservice: " + data.errorMsg,
       );
+      setIsLoading(false);
       return;
     }
 
     // 3. Store VC metadata and update onboarding stage via server action
     try {
-      await processVCIssuance(userId, data);
+      await processVcIssuance(userId, data);
     } catch (error) {
       alert("Failed to complete VC issuance: " + (error as Error).message);
+      setIsLoading(false);
       return;
     }
 
@@ -115,9 +126,10 @@ export function RetrieveVCWithCredentialCheckpoint({
   return (
     <div>
       <p>Waiting for KYC</p>
-      <Button onClick={handleGetInformation}>
-        Get Information and Issue VC
-      </Button>
+      <Button onClick={handleGetInformation} disabled={isLoading}>
+        {isLoading ? <Spinner /> : "Get Information and Issue VC"}
+      </Button >
+
     </div>
   );
 }

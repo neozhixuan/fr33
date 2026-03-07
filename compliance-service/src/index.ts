@@ -4,6 +4,7 @@ dotenv.config();
 import express from "express";
 import cors from "cors";
 import vcRoutes from "./routes/vc.routes";
+import { initConfig } from "./config/config";
 
 const app = express();
 
@@ -18,6 +19,7 @@ const PORT = process.env.PORT || 3001;
 // Initialize server
 const startServer = async () => {
   try {
+    initConfig();
     app.listen(PORT, () => {
       console.log(`-- Express server running on port ${PORT}`);
     });

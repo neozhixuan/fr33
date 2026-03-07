@@ -12,7 +12,10 @@ import {
   deleteJobListing,
   updateJobAfterRefundPayment,
 } from "@/model/job";
-import { JobListingsResult, SmartAccountTransactionResult } from "@/types";
+import {
+  JobListingsResult,
+  SmartAccountTransactionResult,
+} from "@/utils/types";
 import { parseSGDToPolygon } from "./ether";
 import { getWalletAddress } from "./aaActions";
 

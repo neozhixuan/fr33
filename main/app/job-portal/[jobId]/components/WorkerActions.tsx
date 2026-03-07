@@ -1,14 +1,15 @@
 "use client";
 
-import { Job } from "@/generated/prisma-client";
+import { Job, Wallet } from "@/generated/prisma-client";
 import { acceptJobAction, applyFundReleaseAction } from "@/lib/jobActions";
 import ActionForm from "./ActionForm";
 import { useActionState, useState } from "react";
+import { checkIsUserActionAllowed } from "@/lib/vcActions";
 
 interface ApplyJobFormProps {
   job: Omit<Job, "amount"> & { amount: number };
   workerId: number;
-  workerWallet: string;
+  workerWallet: Wallet;
 }
 
 export default function WorkerActions({
@@ -38,6 +39,12 @@ export default function WorkerActions({
 
   const [acceptJobState, applyAction, isAcceptJobPending] = useActionState(
     async () => {
+      const isActionAllowed = await checkIsUserActionAllowed(workerWallet);
+      if (!isActionAllowed) {
+        alert("You are not compliant with the requirements to accept a job. Please ensure you have the necessary credentials and try again.");
+        return { success: false, errorMsg: "You are not allowed to accept a job." };
+      }
+
       const { success, errorMsg, txHash } = await acceptJobAction({
         jobId: job.id,
         workerId,
@@ -56,6 +63,12 @@ export default function WorkerActions({
 
   const [applyFundState, applyFundAction, isApplyFundPending] = useActionState(
     async () => {
+      const isActionAllowed = await checkIsUserActionAllowed(workerWallet);
+      if (!isActionAllowed) {
+        alert("You are not compliant with the requirements to apply for fund release. Please ensure you have the necessary credentials and try again.");
+        return { success: false, errorMsg: "You are not allowed to apply for fund release." };
+      }
+
       const { success, errorMsg, txHash } = await applyFundReleaseAction({
         jobId: job.id,
         workerId,
@@ -104,7 +117,7 @@ export default function WorkerActions({
               </a>
             </p>
             {job.workerWallet &&
-              job.workerWallet === workerWallet &&
+              job.workerWallet === workerWallet.address &&
               // Apply for fund release
               (applyFundReleaseState.applyReleaseTxHash === "N/A" ? (
                 <ActionForm
