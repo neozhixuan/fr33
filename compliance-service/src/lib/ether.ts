@@ -14,7 +14,7 @@ function getProvider() {
 /**
  * Returns the VC Registry wallet as a Signer which can send transactions and sign them.
  */
-function getIssuerWallet() {
+export function getIssuerWallet() {
   return new ethers.Wallet(process.env.ISSUER_PRIVATE_KEY!, getProvider());
 }
 

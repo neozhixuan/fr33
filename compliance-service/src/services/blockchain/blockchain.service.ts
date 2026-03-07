@@ -27,12 +27,12 @@ export async function createVcRegistryTx(
   }
 
   const subjectAddressParts = subjectAddress.split(":");
-  if (subjectAddressParts.length !== 3) {
+  if (subjectAddressParts.length !== 5) {
     throw new Error(
-      "Invalid subject DID format. Expected format: did:web:<wallet_address>",
+      "Invalid subject DID format. Expected format: did:ethr:polygon:amoy:<wallet_address>",
     );
   }
-  const subjectWalletAddress = subjectAddressParts[2];
+  const subjectWalletAddress = subjectAddressParts[4];
 
   let tx;
   try {

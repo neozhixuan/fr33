@@ -8,7 +8,7 @@ import { getFallbackURL } from "@/utils/errors";
 import { redirect } from "next/navigation";
 import EmployerActions from "./components/EmployerActions";
 import Button from "@/ui/Button";
-import { ensureAuthorisedAndCompliantUser } from "../page";
+import { ensureAuthorisedAndCompliantUser } from "@/lib/authActions";
 import WorkerActions from "./components/WorkerActions";
 import MainJobSection from "./components/MainJobSection";
 
@@ -83,7 +83,7 @@ export default async function JobPage({ params }: JobPageProps) {
           <div className="flex flex-col gap-4 w-[300px] border rounded-lg p-4">
             <strong>Worker Actions</strong>
             {wallet ? (
-              <p className="break-words">
+              <><p className="break-words">
                 Worker wallet:{" "}
                 <a
                   href={`https://amoy.polygonscan.com/address/${wallet.address}`}
@@ -94,14 +94,16 @@ export default async function JobPage({ params }: JobPageProps) {
                   {wallet.address}
                 </a>
               </p>
+                <WorkerActions
+                  job={jobForClient}
+                  workerId={userId}
+                  workerWallet={wallet}
+                />
+              </>
             ) : (
               <p>Unexpected Error: No wallet linked</p>
             )}
-            <WorkerActions
-              job={jobForClient}
-              workerId={userId}
-              workerWallet={wallet?.address || ""}
-            />
+
             <p></p>
           </div>
         )}

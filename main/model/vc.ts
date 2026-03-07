@@ -14,7 +14,7 @@ export async function createVCMetadataForWallet(
         txHash: vcData.txHash,
         status: VCStatus.VALID,
         issuerDid: vcData.issuerDid,
-        subjectDid: `did:polygon:${wallet.address}`,
+        subjectDid: `did:ethr:polygon:amoy:${wallet.address}`,
         issuedAt: new Date(vcData.issuedAt),
         expiresAt: new Date(vcData.expiresAt),
         revokedAt: null,

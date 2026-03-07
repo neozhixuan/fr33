@@ -25,7 +25,6 @@ contract JobEscrow {
     address public admin;
 
     // Events
-    // TODO: indexed
     event JobCreated(
         uint256 indexed jobId,
         address indexed employer,
@@ -58,8 +57,9 @@ contract JobEscrow {
         _;
     }
 
+    // The admin is the creator of this smart contract.
     constructor() {
-        admin = msg.sender; // TODO
+        admin = msg.sender;
         jobCounter = 0;
     }
 
@@ -124,7 +124,6 @@ contract JobEscrow {
         emit ReleaseRequested(jobId);
     }
 
-    // TODO external
     /*
     @title Employer approves the release of funds to worker
     @param jobId The unique ID for the job
@@ -192,7 +191,6 @@ contract JobEscrow {
             uint256 createdAt
         )
     {
-        // TODO memory
         Job memory job = jobs[jobId];
         return (job.employer, job.worker, job.amount, job.state, job.createdAt);
     }

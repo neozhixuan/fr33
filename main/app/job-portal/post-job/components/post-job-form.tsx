@@ -1,15 +1,26 @@
 "use client";
 
+import { Wallet } from "@/generated/prisma-client";
 import { postingJobAction } from "@/lib/jobActions";
+import { checkIsUserActionAllowed } from "@/lib/vcActions";
 import Button from "@/ui/Button";
 import FormInput from "@/ui/FormInput";
 import { useActionState } from "react";
 
-export function PostJobForm({ employerId }: { employerId: number }) {
+export function PostJobForm({ employerId, wallet }: { employerId: number; wallet: Wallet }) {
   const [postJobErrorMessage, postJobAction, isPostJobPending] = useActionState(
-    postingJobAction,
+    async (prevState: string | undefined, formData: FormData) => {
+      const isActionAllowed = await checkIsUserActionAllowed(wallet);
+      if (!isActionAllowed) {
+        alert("You are not compliant with the requirements to post a job. Please ensure you have the necessary credentials and try again.");
+        return "You are not allowed to post a job.";
+      }
+
+      return postingJobAction(prevState, formData);
+    },
     undefined
   );
+
 
   return (
     <form action={postJobAction} className="space-y-3 position-relative  w-1/3">

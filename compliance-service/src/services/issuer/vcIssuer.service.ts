@@ -2,8 +2,8 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { IssueVCParams, VCResult } from "../../utils/types";
 import { createVcRegistryTx } from "../blockchain/blockchain.service";
+import { getIssuerWallet } from "../../lib/ether";
 
-const ISSUER_DID = "did:web:compliance.fr33.sg";
 const VC_TTL_SECONDS = 60 * 60 * 24 * 365; // 1 year
 
 export async function issueVC(params: IssueVCParams): Promise<VCResult> {
@@ -11,8 +11,10 @@ export async function issueVC(params: IssueVCParams): Promise<VCResult> {
     const now = Math.floor(Date.now() / 1000);
     const exp = now + VC_TTL_SECONDS;
 
+    const issuerDid = `did:ethr:polygon:amoy:${getIssuerWallet().address}`;
+
     const vcPayload = {
-      iss: ISSUER_DID,
+      iss: issuerDid,
       sub: params.subjectDid,
       iat: now,
       exp,
@@ -44,7 +46,7 @@ export async function issueVC(params: IssueVCParams): Promise<VCResult> {
       txHash,
       issuedAt: new Date(now * 1000).toISOString(),
       expiresAt: new Date(exp * 1000).toISOString(),
-      issuerDid: ISSUER_DID,
+      issuerDid: issuerDid,
       success: true,
     };
   } catch (error) {

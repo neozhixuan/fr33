@@ -3,8 +3,7 @@ import { auth } from "@/server/auth";
 import Button from "@/ui/Button";
 import { ERROR_TYPE_MAP, getFallbackURL } from "@/utils/errors";
 import { redirect } from "next/navigation";
-import { ensureAuthorisedAndCompliantUser } from "../page";
-import { getUserByEmail } from "@/model/user";
+import { ensureAuthorisedAndCompliantUser } from "@/lib/authActions";
 import { PostJobForm } from "./components";
 
 export default async function PostJobPage() {
@@ -15,7 +14,7 @@ export default async function PostJobPage() {
     redirect(getFallbackURL(CURRENT_PAGE, ERROR_TYPE_MAP.UNAUTHORISED));
   }
 
-  const { user } = await ensureAuthorisedAndCompliantUser(session.user);
+  const { user, wallet } = await ensureAuthorisedAndCompliantUser(session.user);
   if (user.role !== "EMPLOYER") {
     redirect("/job-portal");
   }
@@ -24,7 +23,7 @@ export default async function PostJobPage() {
     <CentralContainer>
       <h1>Post a Job</h1>
       <p>This is where employers can post new job listings.</p>
-      <PostJobForm employerId={user.id} />
+      {wallet ? <PostJobForm employerId={user.id} wallet={wallet} /> : <p>Unexpected error: Wallet not found is user</p>}
       <Button href={"/job-portal"}>Back to Job Portal</Button>
     </CentralContainer>
   );

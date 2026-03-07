@@ -20,7 +20,6 @@ contract VCRegistry {
 
     event VCRevoked(bytes32 indexed vcHash, address indexed issuer);
 
-    // todo: external, memory
     /**
      * Register a VC into the on-chain registry.
      * @param vcHash Hash of the VC.
@@ -48,7 +47,6 @@ contract VCRegistry {
         emit VCIssued(keccak256(vcHashBytes), subject, msg.sender, expiresAt); // Emit event with hash
     }
 
-    // todo: storage
     /**
      * Check if vc is valid.
      * @param vcHash Hash of the VC.

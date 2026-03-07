@@ -8,7 +8,7 @@ import { OnboardingStage, Wallet } from "@/generated/prisma-client";
 import { getContract, getProvider } from "./ether";
 import { VC_REGISTRY_ABI } from "@/utils/constants";
 
-const VC_REGISTRY_ADDRESS = process.env.VC_REGISTRY_ADDRESS!;
+const VC_REGISTRY_ADDRESS = process.env.NEXT_VC_REGISTRY_ADDRESS!;
 
 /**
  * Handle the VC issuance response, store the issued VC, and complete the user's onboarding.

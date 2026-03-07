@@ -48,6 +48,12 @@ export default function EmployerActions({ job, employerId, wallet }: FundJobForm
 
   const [state, fundAction, isFundEscrowPending] = useActionState(
     async () => {
+      const isActionAllowed = await checkIsUserActionAllowed(wallet);
+      if (!isActionAllowed) {
+        alert("You are not compliant with the requirements to fund the escrow. Please ensure you have the necessary credentials and try again.");
+        return { success: false, errorMsg: "You are not allowed to fund the escrow." };
+      }
+
       const { success, errorMsg, txHash } = await fundEscrowAction({
         jobId: job.id,
         employerId,
@@ -67,6 +73,12 @@ export default function EmployerActions({ job, employerId, wallet }: FundJobForm
   const [acceptReleaseState, acceptReleaseAction, isAcceptReleasePending] =
     useActionState(
       async () => {
+        const isActionAllowed = await checkIsUserActionAllowed(wallet);
+        if (!isActionAllowed) {
+          alert("You are not compliant with the requirements to approve fund release. Please ensure you have the necessary credentials and try again.");
+          return { success: false, errorMsg: "You are not allowed to approve fund release." };
+        }
+
         const { success, errorMsg, txHash } = await acceptFundReleaseAction({
           jobId: job.id,
           employerId,
@@ -85,6 +97,12 @@ export default function EmployerActions({ job, employerId, wallet }: FundJobForm
 
   const [deleteJobState, deleteAction, isDeleteJobPending] = useActionState(
     async () => {
+      const isActionAllowed = await checkIsUserActionAllowed(wallet);
+      if (!isActionAllowed) {
+        alert("You are not compliant with the requirements to delete a job. Please ensure you have the necessary credentials and try again.");
+        return { success: false, errorMsg: "You are not allowed to delete a job." };
+      }
+
       const { success, errorMsg } = await deleteJobAction({
         jobId: job.id,
         employerId,
@@ -102,10 +120,9 @@ export default function EmployerActions({ job, employerId, wallet }: FundJobForm
     async () => {
       const isActionAllowed = await checkIsUserActionAllowed(wallet);
       if (!isActionAllowed) {
-        alert("You are not authorized to perform this action. Please ensure you have the necessary credentials.");
-        return { success: false, errorMsg: "Unauthorized" };
+        alert("You are not authorized to refund the payment. Please ensure you have the necessary credentials.");
+        return { success: false, errorMsg: "You are not authorized to refund the payment." };
       }
-      alert("VC authorised!")
 
       const { success, errorMsg } = await refundPaymentAction({
         jobId: job.id,
