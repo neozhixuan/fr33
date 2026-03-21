@@ -250,19 +250,23 @@ npm run build
 
 3. Set up your environment variables:
 
-   - Create a `.env` file in the root directory.
+   - Create a `.env` file in the `/smart-contracts` directory.
    - Add your Polygon testnet RPC URL and private key:
      ```
      POLYGON_RPC_URL=your_polygon_amoy_rpc_url
      PRIVATE_KEY=your_private_key
      ```
+   - Copy the `.env.example` file in the `/compliance-service` directory and update all necessary environment variables.
+     ```
+     cp .env.example .env
+     ```
 
 4. Set up the database:
 
    - Create a PostgreSQL database.
-   - Update the `.env` file with your database connection string:
+   - Copy the `.env.example` file in the `/main` directory and update the NEXT_POSTGRES_URL key with your connection string.
      ```
-     POSTGRES_URL=your_postgres_connection_string
+     cp .env.example .env
      ```
 
 5. Set up Prisma:
@@ -283,6 +287,7 @@ npm run test
 
 # Work on specific parts
 npm run dev:main
+npm run dev:compliance
 ```
 
 ## Debugging issues

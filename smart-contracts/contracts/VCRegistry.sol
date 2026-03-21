@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-contract VCRegistry {
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+
+contract VCRegistry is Ownable, Pausable {
     struct Credential {
         address subject;
         address issuer;
@@ -10,6 +13,7 @@ contract VCRegistry {
     }
 
     mapping(bytes32 => Credential) public credentials; // Mapping of bytes to credentials
+    mapping(address => bool) public authorisedIssuers;
 
     event VCIssued(
         bytes32 indexed vcHash,
@@ -19,6 +23,34 @@ contract VCRegistry {
     );
 
     event VCRevoked(bytes32 indexed vcHash, address indexed issuer);
+    event IssuerAuthorisationUpdated(address indexed issuer, bool isAuthorised);
+
+    constructor() Ownable(msg.sender) {
+        authorisedIssuers[msg.sender] = true;
+        emit IssuerAuthorisationUpdated(msg.sender, true);
+    }
+
+    modifier onlyAuthorisedIssuer() {
+        require(authorisedIssuers[msg.sender], "Unauthorised issuer");
+        _;
+    }
+
+    function setAuthorisedIssuer(
+        address issuer,
+        bool isAuthorised
+    ) external onlyOwner {
+        require(issuer != address(0), "Invalid issuer");
+        authorisedIssuers[issuer] = isAuthorised;
+        emit IssuerAuthorisationUpdated(issuer, isAuthorised);
+    }
+
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
+    }
 
     /**
      * Register a VC into the on-chain registry.
@@ -30,30 +62,37 @@ contract VCRegistry {
         string memory vcHash,
         address subject,
         uint256 expiresAt
-    ) external {
+    ) external whenNotPaused onlyAuthorisedIssuer {
+        require(bytes(vcHash).length > 0, "Empty VC hash");
+        require(subject != address(0), "Invalid subject");
+        require(expiresAt > block.timestamp, "Invalid expiry");
+
         bytes memory vcHashBytes = bytes(vcHash); // Convert string to bytes for storage
+        bytes32 vcHashKey = keccak256(vcHashBytes);
         require(
-            credentials[keccak256(vcHashBytes)].issuer == address(0),
+            credentials[vcHashKey].issuer == address(0),
             "VC already exists"
         );
 
-        credentials[keccak256(vcHashBytes)] = Credential({
+        credentials[vcHashKey] = Credential({
             subject: subject,
             issuer: msg.sender,
             expiresAt: expiresAt,
             isRevoked: false
         });
 
-        emit VCIssued(keccak256(vcHashBytes), subject, msg.sender, expiresAt); // Emit event with hash
+        emit VCIssued(vcHashKey, subject, msg.sender, expiresAt); // Emit event with hash
     }
 
     /**
      * Check if vc is valid.
      * @param vcHash Hash of the VC.
      */
-    function revokeCredential(string memory vcHash) external {
+    function revokeCredential(string memory vcHash) external whenNotPaused {
+        require(bytes(vcHash).length > 0, "Empty VC hash");
         Credential storage credential = credentials[keccak256(bytes(vcHash))];
 
+        require(credential.issuer != address(0), "VC does not exist");
         require(credential.issuer == msg.sender, "Only issuer can revoke");
         require(!credential.isRevoked, "VC already revoked");
 
