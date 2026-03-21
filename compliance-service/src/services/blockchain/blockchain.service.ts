@@ -1,5 +1,19 @@
 import { getVcRegistryContract } from "../../lib/ether";
 
+function normaliseVcHash(vcHash: string): `0x${string}` {
+  const trimmed = vcHash.trim();
+
+  if (/^0x[0-9a-fA-F]{64}$/.test(trimmed)) {
+    return trimmed as `0x${string}`;
+  }
+
+  if (/^[0-9a-fA-F]{64}$/.test(trimmed)) {
+    return `0x${trimmed}` as `0x${string}`;
+  }
+
+  throw new Error("Invalid VC hash format. Expected a 32-byte hex string");
+}
+
 /**
  * Creates a transaction in the chain, to verify the existing status of a VC.
  * @param vcHash - the hash of the VC to be registered
@@ -33,12 +47,13 @@ export async function createVcRegistryTx(
     );
   }
   const subjectWalletAddress = subjectAddressParts[4];
+  const vcHashBytes32 = normaliseVcHash(vcHash);
 
   let tx;
   try {
-    console.log(vcHash, subjectWalletAddress, expiry);
+    console.log(vcHashBytes32, subjectWalletAddress, expiry);
     tx = await contract.registerCredential(
-      vcHash as string, // Pass vcHash as a string directly
+      vcHashBytes32,
       subjectWalletAddress,
       expiry,
     );

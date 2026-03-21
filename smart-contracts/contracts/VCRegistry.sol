@@ -12,7 +12,7 @@ contract VCRegistry is Ownable, Pausable {
         bool isRevoked;
     }
 
-    mapping(bytes32 => Credential) public credentials; // Mapping of bytes to credentials
+    mapping(bytes32 => Credential) public credentials;
     mapping(address => bool) public authorisedIssuers;
 
     event VCIssued(
@@ -54,69 +54,78 @@ contract VCRegistry is Ownable, Pausable {
 
     /**
      * Register a VC into the on-chain registry.
-     * @param vcHash Hash of the VC.
+     * @param vcHash keccak256 hash of the off-chain VC payload.
      * @param subject The address of the wallet that this VC belongs to.
      * @param expiresAt A timestamp where the VC will be usable until.
      */
     function registerCredential(
-        string memory vcHash,
+        bytes32 vcHash,
         address subject,
         uint256 expiresAt
     ) external whenNotPaused onlyAuthorisedIssuer {
-        require(bytes(vcHash).length > 0, "Empty VC hash");
+        require(vcHash != bytes32(0), "Empty VC hash");
         require(subject != address(0), "Invalid subject");
         require(expiresAt > block.timestamp, "Invalid expiry");
-
-        bytes memory vcHashBytes = bytes(vcHash); // Convert string to bytes for storage
-        bytes32 vcHashKey = keccak256(vcHashBytes);
         require(
-            credentials[vcHashKey].issuer == address(0),
+            credentials[vcHash].issuer == address(0),
             "VC already exists"
         );
 
-        credentials[vcHashKey] = Credential({
+        credentials[vcHash] = Credential({
             subject: subject,
             issuer: msg.sender,
             expiresAt: expiresAt,
             isRevoked: false
         });
 
-        emit VCIssued(vcHashKey, subject, msg.sender, expiresAt); // Emit event with hash
+        emit VCIssued(vcHash, subject, msg.sender, expiresAt);
     }
 
     /**
-     * Check if vc is valid.
-     * @param vcHash Hash of the VC.
+     * Revoke a VC that was previously issued.
+     * @param vcHash keccak256 hash of the off-chain VC payload.
      */
-    function revokeCredential(string memory vcHash) external whenNotPaused {
-        require(bytes(vcHash).length > 0, "Empty VC hash");
-        Credential storage credential = credentials[keccak256(bytes(vcHash))];
+    function revokeCredential(bytes32 vcHash) external whenNotPaused {
+        require(vcHash != bytes32(0), "Empty VC hash");
+        Credential storage credential = credentials[vcHash];
 
         require(credential.issuer != address(0), "VC does not exist");
         require(credential.issuer == msg.sender, "Only issuer can revoke");
+        require(authorisedIssuers[msg.sender], "Unauthorised issuer");
         require(!credential.isRevoked, "VC already revoked");
 
         credential.isRevoked = true;
 
-        emit VCRevoked(keccak256(bytes(vcHash)), msg.sender);
+        emit VCRevoked(vcHash, msg.sender);
     }
 
     /**
-     * Check if vc is valid.
-     * @param vcHash Hash of the VC.
+     * Check if VC is valid for a holder subject.
+     * @param vcHash keccak256 hash of the off-chain VC payload.
      * @param subject The address of the wallet that this VC belongs to.
      */
     function isValid(
-        string memory vcHash,
+        bytes32 vcHash,
         address subject
     ) external view returns (bool) {
-        Credential memory credential = credentials[keccak256(bytes(vcHash))];
+        if (vcHash == bytes32(0)) return false;
+        Credential memory credential = credentials[vcHash];
 
-        if (credential.subject != subject) return false; // Subject mismatch
-        if (credential.issuer == address(0)) return false; // VC does not exist
-        if (credential.isRevoked) return false; // VC has been revoked
-        if (block.timestamp > credential.expiresAt) return false; // VC has expired
+        if (credential.subject != subject) return false;
+        if (credential.issuer == address(0)) return false;
+        if (credential.isRevoked) return false;
+        if (block.timestamp > credential.expiresAt) return false;
 
         return true;
+    }
+
+    /**
+     * Return VC metadata for verifiers/indexers.
+     * @param vcHash keccak256 hash of the off-chain VC payload.
+     */
+    function getCredential(
+        bytes32 vcHash
+    ) external view returns (Credential memory) {
+        return credentials[vcHash];
     }
 }

@@ -10,6 +10,20 @@ import { VC_REGISTRY_ABI } from "@/utils/constants";
 
 const VC_REGISTRY_ADDRESS = process.env.NEXT_VC_REGISTRY_ADDRESS!;
 
+function normaliseVcHash(vcHash: string): `0x${string}` {
+  const trimmed = vcHash.trim();
+
+  if (/^0x[0-9a-fA-F]{64}$/.test(trimmed)) {
+    return trimmed as `0x${string}`;
+  }
+
+  if (/^[0-9a-fA-F]{64}$/.test(trimmed)) {
+    return `0x${trimmed}` as `0x${string}`;
+  }
+
+  throw new Error("Invalid VC hash format. Expected a 32-byte hex string");
+}
+
 /**
  * Handle the VC issuance response, store the issued VC, and complete the user's onboarding.
  * @param userId - The ID of the user receiving the VC
@@ -71,5 +85,5 @@ export async function checkIsVcValid(
     getProvider(),
   );
 
-  return await contract.isValid(vcHash, subjectAddress);
+  return await contract.isValid(normaliseVcHash(vcHash), subjectAddress);
 }
