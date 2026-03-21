@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-contract JobEscrow {
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+contract JobEscrow is Pausable, ReentrancyGuard {
     enum JobState {
         FUNDED,
         IN_PROGRESS,
@@ -38,6 +41,9 @@ contract JobEscrow {
         uint256 amount
     );
     event JobCancelled(uint256 indexed jobId);
+    event AdminUpdated(address indexed previousAdmin, address indexed newAdmin);
+    event ContractPaused(address indexed admin);
+    event ContractUnpaused(address indexed admin);
 
     // Modifiers
     modifier onlyEmployer(uint256 jobId) {
@@ -69,7 +75,7 @@ contract JobEscrow {
     @param jobId The unique ID for the job
     @param worker The address of the worker
     */
-    function fundJob(uint256 jobId) external payable {
+    function fundJob(uint256 jobId) external payable whenNotPaused {
         require(msg.value > 0, "Must send funds");
 
         Job storage existingJob = jobs[jobId];
@@ -98,10 +104,11 @@ contract JobEscrow {
     @notice Worker accepts the job to start working
     @param jobId The unique ID for the job
     */
-    function acceptJob(uint256 jobId) external jobExists(jobId) {
+    function acceptJob(uint256 jobId) external jobExists(jobId) whenNotPaused {
         Job storage job = jobs[jobId];
         require(job.state == JobState.FUNDED, "Job not funded");
         require(job.worker == address(0), "Job already accepted");
+        require(msg.sender != job.employer, "Employer cannot be worker");
 
         job.worker = msg.sender;
         job.state = JobState.IN_PROGRESS;
@@ -115,7 +122,7 @@ contract JobEscrow {
     */
     function requestRelease(
         uint256 jobId
-    ) external jobExists(jobId) onlyWorker(jobId) {
+    ) external jobExists(jobId) onlyWorker(jobId) whenNotPaused {
         Job storage job = jobs[jobId];
         require(job.state == JobState.IN_PROGRESS, "Job not in progress");
 
@@ -130,17 +137,20 @@ contract JobEscrow {
     */
     function approveRelease(
         uint256 jobId
-    ) external jobExists(jobId) onlyEmployer(jobId) {
+    ) external jobExists(jobId) onlyEmployer(jobId) whenNotPaused nonReentrant {
         Job storage job = jobs[jobId];
         require(
             job.state == JobState.PENDING_APPROVAL,
             "Job not pending approval"
         );
+        require(job.worker != address(0), "Worker not set");
+        require(job.amount > 0, "No funds to release");
 
         job.state = JobState.COMPLETED;
 
         uint256 amount = job.amount;
         address worker = job.worker;
+        job.amount = 0;
 
         (bool success, ) = worker.call{value: amount}("");
         require(success, "Transfer to worker failed");
@@ -154,17 +164,19 @@ contract JobEscrow {
     */
     function cancelJob(
         uint256 jobId
-    ) external jobExists(jobId) onlyEmployer(jobId) {
+    ) external jobExists(jobId) onlyEmployer(jobId) whenNotPaused nonReentrant {
         Job storage job = jobs[jobId];
         require(
             job.state == JobState.FUNDED,
             "Job cannot be cancelled at this stage"
         );
+        require(job.amount > 0, "No funds to refund");
 
         job.state = JobState.CANCELLED;
 
         uint256 amount = job.amount;
         address employer = job.employer;
+        job.amount = 0;
 
         (bool success, ) = employer.call{value: amount}("");
         require(success, "Refund to employer failed");
@@ -201,6 +213,26 @@ contract JobEscrow {
     */
     function updateAdmin(address newAdmin) external onlyAdmin {
         require(newAdmin != address(0), "Invalid address of incumbent admin");
+        address previousAdmin = admin;
         admin = newAdmin;
+        emit AdminUpdated(previousAdmin, newAdmin);
+    }
+
+    function pause() external onlyAdmin {
+        _pause();
+        emit ContractPaused(msg.sender);
+    }
+
+    function unpause() external onlyAdmin {
+        _unpause();
+        emit ContractUnpaused(msg.sender);
+    }
+
+    receive() external payable {
+        revert("Direct ETH transfer not allowed");
+    }
+
+    fallback() external payable {
+        revert("Invalid call");
     }
 }
