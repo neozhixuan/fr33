@@ -3,8 +3,10 @@ pragma solidity ^0.8.20;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-contract VCRegistry is Ownable, Pausable {
+contract VCRegistry is Ownable, Pausable, EIP712 {
     struct Credential {
         address subject;
         address issuer;
@@ -14,6 +16,12 @@ contract VCRegistry is Ownable, Pausable {
 
     mapping(bytes32 => Credential) public credentials; // Mapping of bytes to credentials
     mapping(address => bool) public authorisedIssuers;
+    mapping(address => uint256) public nonces;
+
+    bytes32 private constant REGISTER_CREDENTIAL_TYPEHASH =
+        keccak256(
+            "RegisterCredential(bytes32 vcHash,address subject,uint256 expiresAt,uint256 nonce,uint256 deadline)"
+        );
 
     event VCIssued(
         bytes32 indexed vcHash,
@@ -24,8 +32,15 @@ contract VCRegistry is Ownable, Pausable {
 
     event VCRevoked(bytes32 indexed vcHash, address indexed issuer);
     event IssuerAuthorisationUpdated(address indexed issuer, bool isAuthorised);
+    event VCIssuanceAuthorised(
+        bytes32 indexed vcHash,
+        address indexed subject,
+        address indexed issuer,
+        uint256 nonce,
+        uint256 deadline
+    );
 
-    constructor() Ownable(msg.sender) {
+    constructor() Ownable(msg.sender) EIP712("VCRegistry", "1") {
         authorisedIssuers[msg.sender] = true;
         emit IssuerAuthorisationUpdated(msg.sender, true);
     }
@@ -64,24 +79,77 @@ contract VCRegistry is Ownable, Pausable {
         uint256 expiresAt
     ) external whenNotPaused onlyAuthorisedIssuer {
         require(bytes(vcHash).length > 0, "Empty VC hash");
+        _registerCredential(
+            keccak256(bytes(vcHash)),
+            subject,
+            msg.sender,
+            expiresAt
+        );
+    }
+
+    /**
+     * Register a VC where the transaction is submitted by the subject wallet
+     * and authorised by an issuer signature (EIP-712).
+     */
+    function registerCredentialWithAuthorisation(
+        bytes32 vcHash,
+        address subject,
+        uint256 expiresAt,
+        uint256 nonce,
+        uint256 deadline,
+        bytes calldata signature
+    ) external whenNotPaused {
+        require(msg.sender == subject, "Only subject can submit");
+        require(vcHash != bytes32(0), "Invalid VC hash");
+        require(deadline >= block.timestamp, "Authorisation expired");
+
+        uint256 currentNonce = nonces[subject];
+        require(nonce == currentNonce, "Invalid nonce");
+
+        bytes32 structHash = keccak256(
+            abi.encode(
+                REGISTER_CREDENTIAL_TYPEHASH,
+                vcHash,
+                subject,
+                expiresAt,
+                nonce,
+                deadline
+            )
+        );
+        bytes32 digest = _hashTypedDataV4(structHash);
+        address recoveredIssuer = ECDSA.recover(digest, signature);
+        require(authorisedIssuers[recoveredIssuer], "Unauthorised issuer");
+
+        nonces[subject] = currentNonce + 1;
+        _registerCredential(vcHash, subject, recoveredIssuer, expiresAt);
+
+        emit VCIssuanceAuthorised(
+            vcHash,
+            subject,
+            recoveredIssuer,
+            nonce,
+            deadline
+        );
+    }
+
+    function _registerCredential(
+        bytes32 vcHash,
+        address subject,
+        address issuer,
+        uint256 expiresAt
+    ) internal {
         require(subject != address(0), "Invalid subject");
         require(expiresAt > block.timestamp, "Invalid expiry");
+        require(credentials[vcHash].issuer == address(0), "VC already exists");
 
-        bytes memory vcHashBytes = bytes(vcHash); // Convert string to bytes for storage
-        bytes32 vcHashKey = keccak256(vcHashBytes);
-        require(
-            credentials[vcHashKey].issuer == address(0),
-            "VC already exists"
-        );
-
-        credentials[vcHashKey] = Credential({
+        credentials[vcHash] = Credential({
             subject: subject,
-            issuer: msg.sender,
+            issuer: issuer,
             expiresAt: expiresAt,
             isRevoked: false
         });
 
-        emit VCIssued(vcHashKey, subject, msg.sender, expiresAt); // Emit event with hash
+        emit VCIssued(vcHash, subject, issuer, expiresAt);
     }
 
     /**
@@ -90,7 +158,16 @@ contract VCRegistry is Ownable, Pausable {
      */
     function revokeCredential(string memory vcHash) external whenNotPaused {
         require(bytes(vcHash).length > 0, "Empty VC hash");
-        Credential storage credential = credentials[keccak256(bytes(vcHash))];
+        _revokeCredential(keccak256(bytes(vcHash)));
+    }
+
+    function revokeCredentialHash(bytes32 vcHash) external whenNotPaused {
+        require(vcHash != bytes32(0), "Invalid VC hash");
+        _revokeCredential(vcHash);
+    }
+
+    function _revokeCredential(bytes32 vcHash) internal {
+        Credential storage credential = credentials[vcHash];
 
         require(credential.issuer != address(0), "VC does not exist");
         require(credential.issuer == msg.sender, "Only issuer can revoke");
@@ -98,7 +175,7 @@ contract VCRegistry is Ownable, Pausable {
 
         credential.isRevoked = true;
 
-        emit VCRevoked(keccak256(bytes(vcHash)), msg.sender);
+        emit VCRevoked(vcHash, msg.sender);
     }
 
     /**
@@ -110,7 +187,16 @@ contract VCRegistry is Ownable, Pausable {
         string memory vcHash,
         address subject
     ) external view returns (bool) {
-        Credential memory credential = credentials[keccak256(bytes(vcHash))];
+        return isValidHash(keccak256(bytes(vcHash)), subject);
+    }
+
+    function isValidHash(
+        bytes32 vcHash,
+        address subject
+    ) public view returns (bool) {
+        if (vcHash == bytes32(0)) return false;
+
+        Credential memory credential = credentials[vcHash];
 
         if (credential.subject != subject) return false; // Subject mismatch
         if (credential.issuer == address(0)) return false; // VC does not exist

@@ -1,8 +1,8 @@
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { IssueVCParams, VCResult } from "../../utils/types";
-import { createVcRegistryTx } from "../blockchain/blockchain.service";
-import { getIssuerWallet } from "../../lib/ether";
+import { buildVcRegistrationAuthorisation } from "../blockchain/blockchain.service";
+import { getIssuerAuthorisationSigner } from "../../lib/ether";
 
 const VC_TTL_SECONDS = 60 * 60 * 24 * 365; // 1 year
 
@@ -11,7 +11,9 @@ export async function issueVC(params: IssueVCParams): Promise<VCResult> {
     const now = Math.floor(Date.now() / 1000);
     const exp = now + VC_TTL_SECONDS;
 
-    const issuerDid = `did:ethr:polygon:amoy:${getIssuerWallet().address}`;
+    const issuerDid = `did:ethr:polygon:amoy:${
+      getIssuerAuthorisationSigner().address
+    }`;
 
     const vcPayload = {
       iss: issuerDid,
@@ -37,13 +39,17 @@ export async function issueVC(params: IssueVCParams): Promise<VCResult> {
     // Hash VC for reference
     const vcHash = crypto.createHash("sha256").update(signedVC).digest("hex");
 
-    // Upload VC data into the blockchain
-    const txHash = await createVcRegistryTx(vcHash, params.subjectDid, exp);
+    // Build issuer authorisation for subject-submitted on-chain registration
+    const registrationAuthorisation = await buildVcRegistrationAuthorisation(
+      vcHash,
+      params.subjectDid,
+      exp,
+    );
 
     return {
       vc: signedVC,
       vcHash,
-      txHash,
+      registrationAuthorisation,
       issuedAt: new Date(now * 1000).toISOString(),
       expiresAt: new Date(exp * 1000).toISOString(),
       issuerDid: issuerDid,
@@ -53,7 +59,7 @@ export async function issueVC(params: IssueVCParams): Promise<VCResult> {
     return {
       vc: "",
       vcHash: "",
-      txHash: "",
+      registrationAuthorisation: null,
       issuedAt: "",
       expiresAt: "",
       issuerDid: "",
