@@ -66,10 +66,7 @@ contract VCRegistry is Ownable, Pausable {
         require(vcHash != bytes32(0), "Empty VC hash");
         require(subject != address(0), "Invalid subject");
         require(expiresAt > block.timestamp, "Invalid expiry");
-        require(
-            credentials[vcHash].issuer == address(0),
-            "VC already exists"
-        );
+        require(credentials[vcHash].issuer == address(0), "VC already exists");
 
         credentials[vcHash] = Credential({
             subject: subject,

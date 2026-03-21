@@ -24,7 +24,9 @@ describe("VCRegistry", function () {
     const vcHash = ethers.keccak256(ethers.toUtf8Bytes("signed-vc-jwt"));
 
     await expect(
-      registry.connect(issuer).registerCredential(vcHash, subject.address, expiresAt),
+      registry
+        .connect(issuer)
+        .registerCredential(vcHash, subject.address, expiresAt),
     )
       .to.emit(registry, "VCIssued")
       .withArgs(vcHash, subject.address, issuer.address, expiresAt);
