@@ -131,5 +131,7 @@ export async function checkIsVcValid(
     getProvider(),
   );
 
-  return await contract.isValidHash(normaliseVcHash(vcHash), subjectAddress);
+  // Use string-based check for compatibility across old/new VCRegistry deployments.
+  const legacyHash = vcHash.startsWith("0x") ? vcHash.slice(2) : vcHash;
+  return await contract.isValid(legacyHash, subjectAddress);
 }
