@@ -53,4 +53,55 @@ describe("JobEscrow", function () {
 
     expect(after).to.be.gt(before);
   });
+
+  it("opens dispute, freezes escrow, and admin resolves to worker", async function () {
+    const { escrow, employer, worker, admin } = await deployFixture();
+
+    const jobId = 2;
+    const amount = ethers.parseEther("0.2");
+
+    await escrow.connect(employer).fundJob(jobId, { value: amount });
+    await escrow.connect(worker).acceptJob(jobId);
+    await escrow.connect(worker).requestRelease(jobId);
+
+    await escrow.connect(worker).openDispute(jobId);
+
+    const disputedJob = await escrow.getJob(jobId);
+    expect(disputedJob.state).to.equal(4); // DISPUTED
+    expect(disputedJob.isFrozen).to.equal(true);
+
+    await expect(
+      escrow.connect(employer).approveRelease(jobId),
+    ).to.be.revertedWith("Job not pending approval");
+
+    await escrow.connect(admin).resolveDispute(jobId, 0, 0); // RELEASE_TO_WORKER
+
+    const resolvedJob = await escrow.getJob(jobId);
+    expect(resolvedJob.state).to.equal(3); // COMPLETED
+    expect(resolvedJob.isFrozen).to.equal(false);
+    expect(resolvedJob.amount).to.equal(0);
+  });
+
+  it("auto-releases funds after timeout when employer is inactive", async function () {
+    const { escrow, employer, worker } = await deployFixture();
+
+    const jobId = 3;
+    const amount = ethers.parseEther("0.15");
+    const timeoutSeconds = 3600;
+
+    await escrow.connect(employer).fundJob(jobId, { value: amount });
+    await escrow.connect(worker).acceptJob(jobId);
+    await escrow.connect(worker).requestRelease(jobId);
+
+    await ethers.provider.send("evm_increaseTime", [timeoutSeconds + 1]);
+    await ethers.provider.send("evm_mine", []);
+
+    await escrow
+      .connect(employer)
+      .autoReleaseAfterTimeout(jobId, timeoutSeconds);
+
+    const completedJob = await escrow.getJob(jobId);
+    expect(completedJob.state).to.equal(3); // COMPLETED
+    expect(completedJob.amount).to.equal(0);
+  });
 });

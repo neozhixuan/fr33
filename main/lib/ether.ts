@@ -13,6 +13,16 @@ export function getProvider() {
 }
 
 /**
+ * Returns admin signer for backend-operated privileged contract transactions.
+ */
+export function getAdminSigner() {
+  const normalisedPrivateKey = PRIVATE_KEY.startsWith("0x")
+    ? PRIVATE_KEY
+    : `0x${PRIVATE_KEY}`;
+  return new ethers.Wallet(normalisedPrivateKey, getProvider());
+}
+
+/**
  * Generic function to fetch any contract given the address, abi and signer or provider.
  * @param address Address of contract
  * @param abi ABI of contract

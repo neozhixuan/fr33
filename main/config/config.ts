@@ -17,4 +17,25 @@ export const initConfig = () => {
     );
   if (!process.env.NEXT_VC_REGISTRY_ADDRESS)
     throw new Error("NEXT_VC_REGISTRY_ADDRESS environment variable not set");
+
+  if (process.env.NEXT_TIMEOUT_RELEASE_WORKER_ENABLED === "true") {
+    const timeoutRaw = process.env.NEXT_FUND_RELEASE_TIMEOUT_SECONDS;
+    const pollRaw = process.env.NEXT_TIMEOUT_RELEASE_POLL_MS;
+
+    if (
+      timeoutRaw &&
+      (!Number.isFinite(Number(timeoutRaw)) || Number(timeoutRaw) <= 0)
+    ) {
+      throw new Error(
+        "NEXT_FUND_RELEASE_TIMEOUT_SECONDS must be a positive number",
+      );
+    }
+
+    if (
+      pollRaw &&
+      (!Number.isFinite(Number(pollRaw)) || Number(pollRaw) < 5000)
+    ) {
+      throw new Error("NEXT_TIMEOUT_RELEASE_POLL_MS must be a number >= 5000");
+    }
+  }
 };
