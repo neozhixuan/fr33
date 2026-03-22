@@ -1,0 +1,44 @@
+version: "3.8"
+
+services:
+  graph-node:
+    image: graphprotocol/graph-node:v0.41.0
+    ports:
+      - "8000:8000" # GraphQL query
+      - "8001:8001" # GraphQL subscriptions
+      - "8020:8020" # Admin / deployment endpoint
+      - "8030:8030" # Index node endpoint
+      - "8040:8040" # Metrics
+    depends_on:
+      - ipfs
+      - postgres
+    environment:
+      postgres_host: postgres
+      postgres_user: graph-node
+      postgres_pass: let-me-in
+      postgres_db: graph-node
+      ipfs: "ipfs:5001"
+      ethereum: "polygon-amoy:${POLYGON_AMOY_RPC_URL}"
+      GRAPH_LOG: info
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  ipfs:
+    image: ipfs/kubo:v0.34.1
+    ports:
+      - "5001:5001"
+
+  postgres:
+    image: postgres:15
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: graph-node
+      POSTGRES_PASSWORD: let-me-in
+      POSTGRES_DB: graph-node
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C" # Graph Node requires C collation for string comparisons
+    volumes:
+      - graph-node-postgres:/var/lib/postgresql/data
+
+volumes:
+  graph-node-postgres:

@@ -37,3 +37,21 @@ export async function getVcRegistryReadContract() {
     );
   }
 }
+
+/**
+ * Fetches the VC registry contract with issuer signer for write operations.
+ */
+export async function getVcRegistryWriteContract() {
+  try {
+    return new ethers.Contract(
+      vcRegistryAddress,
+      VC_REGISTRY_ABI,
+      getIssuerAuthorisationSigner(),
+    );
+  } catch (error) {
+    throw new Error(
+      "Error connecting to VCRegistry write contract: " +
+        (error as Error).message,
+    );
+  }
+}

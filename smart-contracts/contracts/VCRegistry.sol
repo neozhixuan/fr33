@@ -14,7 +14,7 @@ contract VCRegistry is Ownable, Pausable, EIP712 {
         bool isRevoked;
     }
 
-    mapping(bytes32 => Credential) public credentials; // Mapping of bytes to credentials
+    mapping(bytes32 => Credential) public credentials;
     mapping(address => bool) public authorisedIssuers;
     mapping(address => uint256) public nonces;
 
@@ -69,22 +69,17 @@ contract VCRegistry is Ownable, Pausable, EIP712 {
 
     /**
      * Register a VC into the on-chain registry.
-     * @param vcHash Hash of the VC.
+     * @param vcHash keccak256 hash of the off-chain VC payload.
      * @param subject The address of the wallet that this VC belongs to.
      * @param expiresAt A timestamp where the VC will be usable until.
      */
     function registerCredential(
-        string memory vcHash,
+        bytes32 vcHash,
         address subject,
         uint256 expiresAt
     ) external whenNotPaused onlyAuthorisedIssuer {
-        require(bytes(vcHash).length > 0, "Empty VC hash");
-        _registerCredential(
-            keccak256(bytes(vcHash)),
-            subject,
-            msg.sender,
-            expiresAt
-        );
+        require(vcHash != bytes32(0), "Invalid VC hash");
+        _registerCredential(vcHash, subject, msg.sender, expiresAt);
     }
 
     /**
@@ -153,8 +148,8 @@ contract VCRegistry is Ownable, Pausable, EIP712 {
     }
 
     /**
-     * Check if vc is valid.
-     * @param vcHash Hash of the VC.
+     * Revoke a VC that was previously issued.
+     * @param vcHash keccak256 hash of the off-chain VC payload.
      */
     function revokeCredential(string memory vcHash) external whenNotPaused {
         require(bytes(vcHash).length > 0, "Empty VC hash");
@@ -171,6 +166,7 @@ contract VCRegistry is Ownable, Pausable, EIP712 {
 
         require(credential.issuer != address(0), "VC does not exist");
         require(credential.issuer == msg.sender, "Only issuer can revoke");
+        require(authorisedIssuers[msg.sender], "Unauthorised issuer");
         require(!credential.isRevoked, "VC already revoked");
 
         credential.isRevoked = true;
@@ -179,15 +175,15 @@ contract VCRegistry is Ownable, Pausable, EIP712 {
     }
 
     /**
-     * Check if vc is valid.
-     * @param vcHash Hash of the VC.
+     * Check if VC is valid for a holder subject.
+     * @param vcHash keccak256 hash of the off-chain VC payload.
      * @param subject The address of the wallet that this VC belongs to.
      */
     function isValid(
-        string memory vcHash,
+        bytes32 vcHash,
         address subject
     ) external view returns (bool) {
-        return isValidHash(keccak256(bytes(vcHash)), subject);
+        return isValidHash(vcHash, subject);
     }
 
     function isValidHash(
@@ -198,11 +194,21 @@ contract VCRegistry is Ownable, Pausable, EIP712 {
 
         Credential memory credential = credentials[vcHash];
 
-        if (credential.subject != subject) return false; // Subject mismatch
-        if (credential.issuer == address(0)) return false; // VC does not exist
-        if (credential.isRevoked) return false; // VC has been revoked
-        if (block.timestamp > credential.expiresAt) return false; // VC has expired
+        if (credential.subject != subject) return false;
+        if (credential.issuer == address(0)) return false;
+        if (credential.isRevoked) return false;
+        if (block.timestamp > credential.expiresAt) return false;
 
         return true;
+    }
+
+    /**
+     * Return VC metadata for verifiers/indexers.
+     * @param vcHash keccak256 hash of the off-chain VC payload.
+     */
+    function getCredential(
+        bytes32 vcHash
+    ) external view returns (Credential memory) {
+        return credentials[vcHash];
     }
 }

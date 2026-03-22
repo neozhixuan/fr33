@@ -1,0 +1,138 @@
+generator client {
+    provider = "prisma-client-js"
+    output   = "../src/generated/prisma-client"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("POSTGRES_URL")
+    schemas  = ["issuer_service", "compliance_service"]
+}
+
+model IssuedVC {
+    id         Int      @id @default(autoincrement())
+    vcHash     String   @unique
+    subjectDid String
+    issuedAt   DateTime
+    expiresAt  DateTime
+    status     VCStatus @default(VALID)
+
+    @@schema("issuer_service")
+}
+
+enum VCStatus {
+    VALID
+    REVOKED
+    EXPIRED
+
+    @@schema("issuer_service")
+}
+
+model EscrowActivity {
+    id                  Int             @id @default(autoincrement())
+    sourceEventId       String          @unique
+    jobId               BigInt
+    eventType           EscrowEventType
+    walletAddress       String?
+    counterpartyAddress String?
+    amountWei           String?
+    blockNumber         BigInt
+    blockTimestamp      DateTime        @db.Timestamptz(6)
+    txHash              String
+    logIndex            Int
+    createdAt           DateTime        @default(now()) @db.Timestamptz(6)
+
+    @@index([walletAddress, blockTimestamp])
+    @@index([eventType, blockTimestamp])
+    @@map("escrow_activity")
+    @@schema("compliance_service")
+}
+
+enum EscrowEventType {
+    JOB_CREATED
+    JOB_ACCEPTED
+    RELEASE_REQUESTED
+    FUNDS_RELEASED
+    JOB_CANCELLED
+
+    @@schema("compliance_service")
+}
+
+model ComplianceIngestionCursor {
+    id                     Int       @id
+    lastProcessedTimestamp DateTime? @db.Timestamptz(6)
+    updatedAt              DateTime  @updatedAt @db.Timestamptz(6)
+
+    @@map("compliance_ingestion_cursor")
+    @@schema("compliance_service")
+}
+
+model ComplianceProfile {
+    id              Int                     @id @default(autoincrement())
+    walletAddress   String                  @unique
+    cumulativeScore Int                     @default(0)
+    lastTriggeredAt DateTime?               @db.Timestamptz(6)
+    createdAt       DateTime                @default(now()) @db.Timestamptz(6)
+    updatedAt       DateTime                @updatedAt @db.Timestamptz(6)
+    ruleTriggers    ComplianceRuleTrigger[]
+    complianceCases ComplianceCase[]
+
+    @@map("compliance_profiles")
+    @@schema("compliance_service")
+}
+
+model ComplianceRuleTrigger {
+    id             Int                @id @default(autoincrement())
+    profileId      Int
+    profile        ComplianceProfile  @relation(fields: [profileId], references: [id])
+    ruleName       ComplianceRuleName
+    scoreDelta     Int
+    threshold      Json
+    observed       Json
+    sourceEventId  String?
+    sourceTxHash   String?
+    fingerprint    String             @unique
+    caseId         Int?
+    complianceCase ComplianceCase?    @relation(fields: [caseId], references: [id])
+    triggeredAt    DateTime           @default(now()) @db.Timestamptz(6)
+
+    @@index([profileId, triggeredAt])
+    @@map("compliance_rule_triggers")
+    @@schema("compliance_service")
+}
+
+enum ComplianceRuleName {
+    LARGE_ESCROW_ANOMALY
+    HIGH_DISPUTE_FREQUENCY
+    BURST_ACTIVITY
+
+    @@schema("compliance_service")
+}
+
+model ComplianceCase {
+    id              Int                     @id @default(autoincrement())
+    profileId       Int
+    profile         ComplianceProfile       @relation(fields: [profileId], references: [id])
+    status          ComplianceCaseStatus    @default(OPEN)
+    scoreAtCreation Int
+    triggeredRules  String[]
+    evidence        Json
+    actionNotes     String?
+    actionTxHash    String?
+    createdAt       DateTime                @default(now()) @db.Timestamptz(6)
+    updatedAt       DateTime                @updatedAt @db.Timestamptz(6)
+    closedAt        DateTime?               @db.Timestamptz(6)
+    ruleTriggers    ComplianceRuleTrigger[]
+
+    @@index([status, createdAt])
+    @@map("compliance_cases")
+    @@schema("compliance_service")
+}
+
+enum ComplianceCaseStatus {
+    OPEN
+    DISMISSED
+    ACTIONED
+
+    @@schema("compliance_service")
+}

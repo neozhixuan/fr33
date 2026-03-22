@@ -1,0 +1,36 @@
+specVersion: 1.3.0
+schema:
+  file: ./schema.graphql
+
+dataSources:
+  - kind: ethereum
+    name: JobEscrow
+    network: polygon-amoy
+    source:
+      # Check /ignition/deployments/chain-80002/deployed_addresses.json
+      address: "0xDC0F09d74570eb51F27f8EbD3bB93aF8A81a6252"
+      # Check /ignition/deployments/chain-80002/journal.jsonl
+      abi: JobEscrow
+      startBlock: 35520688
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - Job
+        - EscrowEvent
+      abis:
+        - name: JobEscrow
+          file: ./abis/JobEscrow.json
+      eventHandlers:
+        - event: JobCreated(indexed uint256,indexed address,uint256)
+          handler: handleJobCreated
+        - event: JobAccepted(indexed uint256,indexed address)
+          handler: handleJobAccepted
+        - event: ReleaseRequested(indexed uint256)
+          handler: handleReleaseRequested
+        - event: FundsReleased(indexed uint256,indexed address,uint256)
+          handler: handleFundsReleased
+        - event: JobCancelled(indexed uint256)
+          handler: handleJobCancelled
+      file: ./src/job-escrow.ts

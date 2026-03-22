@@ -12,11 +12,17 @@ import { sendSmartAccountTransaction } from "./aaActions";
 const VC_REGISTRY_ADDRESS = process.env.NEXT_VC_REGISTRY_ADDRESS!;
 
 function normaliseVcHash(vcHash: string): `0x${string}` {
-  const hex = vcHash.startsWith("0x") ? vcHash.slice(2) : vcHash;
-  if (!/^[0-9a-fA-F]{64}$/.test(hex)) {
-    throw new Error("Invalid VC hash. Expected 32-byte hex string");
+  const trimmed = vcHash.trim();
+
+  if (/^0x[0-9a-fA-F]{64}$/.test(trimmed)) {
+    return trimmed as `0x${string}`;
   }
-  return `0x${hex.toLowerCase()}`;
+
+  if (/^[0-9a-fA-F]{64}$/.test(trimmed)) {
+    return `0x${trimmed}` as `0x${string}`;
+  }
+
+  throw new Error("Invalid VC hash format. Expected a 32-byte hex string");
 }
 
 async function registerVcOnChain(
