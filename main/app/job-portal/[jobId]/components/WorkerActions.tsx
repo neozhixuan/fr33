@@ -3,6 +3,7 @@
 import { Job, Wallet } from "@/generated/prisma-client";
 import { acceptJobAction, applyFundReleaseAction } from "@/lib/jobActions";
 import ActionForm from "./ActionForm";
+import ActionStatusCard from "./ActionStatusCard";
 import { useActionState, useState } from "react";
 import { checkIsUserActionAllowed } from "@/lib/vcActions";
 
@@ -86,7 +87,7 @@ export default function WorkerActions({
   );
 
   return (
-    <>
+    <div className="space-y-4">
       {acceptState.acceptTxHash === "N/A" ? (
         <ActionForm
           action={applyAction}
@@ -97,67 +98,37 @@ export default function WorkerActions({
         />
       ) : (
         <>
-          <br />
-          <p>Job is already accepted.</p>{" "}
-          <div>
-            <p>
-              <b>Funded at:</b>{" "}
-              {job.acceptedAt ? acceptState.acceptedAt : "N/A"}
-            </p>
-            <br />
-            <p className="break-words">
-              <b>Transaction hash for acceptance action:</b>{" "}
-              <a
-                href={`https://amoy.polygonscan.com/tx/${acceptState.acceptTxHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-decoration-line text-blue-900"
-              >
-                {acceptState.acceptTxHash}
-              </a>
-            </p>
-            {job.workerWallet &&
-              job.workerWallet === workerWallet.address &&
-              // Apply for fund release
-              (applyFundReleaseState.applyReleaseTxHash === "N/A" ? (
-                <ActionForm
-                  action={applyFundAction}
-                  isPending={isApplyFundPending}
-                  state={applyFundState}
-                  buttonLabel="Apply for Fund Release"
-                  successMessage="Fund release applied successfully!"
-                />
-              ) : (
-                // Already applied for fund release
-                <>
-                  <br />
-                  <br />
-                  <p>Fund release has been applied.</p>{" "}
-                  <div>
-                    <p>
-                      <b>Applied at:</b>{" "}
-                      {job.applyReleaseAt
-                        ? applyFundReleaseState.appliedAt
-                        : "N/A"}
-                    </p>
-                    <br />
-                    <p className="break-words">
-                      <b>Transaction hash for fund release application:</b>{" "}
-                      <a
-                        href={`https://amoy.polygonscan.com/tx/${applyFundReleaseState.applyReleaseTxHash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-decoration-line text-blue-900"
-                      >
-                        {applyFundReleaseState.applyReleaseTxHash}
-                      </a>
-                    </p>
-                  </div>
-                </>
-              ))}
-          </div>
+          <ActionStatusCard
+            title="Job is already accepted."
+            dateLabel="Accepted at"
+            dateValue={job.acceptedAt ? acceptState.acceptedAt ?? "N/A" : "N/A"}
+            hashLabel="Transaction hash for acceptance action"
+            hashValue={acceptState.acceptTxHash || "N/A"}
+          />
+
+          {job.workerWallet &&
+            job.workerWallet === workerWallet.address &&
+            (applyFundReleaseState.applyReleaseTxHash === "N/A" ? (
+              <ActionForm
+                action={applyFundAction}
+                isPending={isApplyFundPending}
+                state={applyFundState}
+                buttonLabel="Apply for Fund Release"
+                successMessage="Fund release applied successfully!"
+              />
+            ) : (
+              <ActionStatusCard
+                title="Fund release has been applied."
+                dateLabel="Applied at"
+                dateValue={
+                  job.applyReleaseAt ? applyFundReleaseState.appliedAt ?? "N/A" : "N/A"
+                }
+                hashLabel="Transaction hash for fund release application"
+                hashValue={applyFundReleaseState.applyReleaseTxHash || "N/A"}
+              />
+            ))}
         </>
       )}
-    </>
+    </div>
   );
 }

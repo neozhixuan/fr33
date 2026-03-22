@@ -1,9 +1,8 @@
 "use client";
 
 import { createWallet } from "@/lib/aaActions";
-import Button from "@/ui/Button";
-import { Spinner } from "@/ui/Spinner";
 import { useState } from "react";
+import StepSkeleton from "./step-skeleton";
 
 export function CreateWalletCheckpoint({
   userId,
@@ -31,11 +30,18 @@ export function CreateWalletCheckpoint({
   };
 
   return (
-    <>
-      <h1>Create Wallet Component</h1>
-      <Button onClick={initiateCreateWallet} disabled={isLoading}>
-        {isLoading ? <Spinner /> : "Create Wallet"}
-      </Button >
-    </>
+    <StepSkeleton
+      stepName="Step 1 - Create Wallet"
+      stepDescription="Generate your smart-account wallet. This can be retried safely if interrupted."
+    >
+      <button
+        type="button"
+        onClick={initiateCreateWallet}
+        disabled={isLoading}
+        className="mt-6 rounded-md bg-[#00f2ff] px-5 py-3 text-xs font-bold uppercase tracking-[0.2em] text-[#00363a] shadow-[0_0_18px_rgba(0,242,255,0.2)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {isLoading ? "Creating wallet..." : "Create Wallet"}
+      </button>
+    </StepSkeleton>
   );
 }

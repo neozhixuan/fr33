@@ -1,6 +1,8 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { getWalletAddress } from "@/lib/aaActions";
-import Button from "@/ui/Button";
+import StepSkeleton from "./step-skeleton";
 
 export function FinalCheckpoint({
   userId,
@@ -20,10 +22,20 @@ export function FinalCheckpoint({
   }, [userId]);
 
   return (
-    <>
-      <h1>Congratulations, you have completed the compliance sequence.</h1>
-      <p>Your walletAddress is {walletAddress}.</p>
-      <Button onClick={onSuccess}>Proceed to Dashboard</Button>
-    </>
+    <StepSkeleton
+      stepName="Step 4 - Completed"
+      stepDescription="Congratulations, you have completed the compliance sequence."
+    >
+      <p className="mt-2 break-all text-sm text-[#d6ffe0]">
+        Wallet address: {walletAddress || "Loading..."}
+      </p>
+      <button
+        type="button"
+        onClick={onSuccess}
+        className="mt-6 rounded-md bg-[#00f2ff] px-5 py-3 text-xs font-bold uppercase tracking-[0.2em] text-[#00363a] shadow-[0_0_18px_rgba(0,242,255,0.2)] transition-all hover:brightness-110"
+      >
+        Proceed to Dashboard
+      </button>
+    </StepSkeleton>
   );
 }

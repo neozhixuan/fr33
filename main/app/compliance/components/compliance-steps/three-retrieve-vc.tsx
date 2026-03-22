@@ -1,13 +1,12 @@
 "use client";
 
-import Button from "@/ui/Button";
 import { UserInformation } from "../compliance-content";
 import { IssueVCResponse } from "@/utils/types";
 import { processVcIssuance } from "@/lib/vcActions";
 import { getWalletAddress } from "@/lib/aaActions";
 import { convertBirthdateToAgeOver } from "@/utils/conv";
-import { Spinner } from "@/ui/Spinner";
 import { useState } from "react";
+import StepSkeleton from "./step-skeleton";
 
 export function RetrieveVCWithCredentialCheckpoint({
   authorizationCode,
@@ -124,12 +123,18 @@ export function RetrieveVCWithCredentialCheckpoint({
   };
 
   return (
-    <div>
-      <p>Waiting for KYC</p>
-      <Button onClick={handleGetInformation} disabled={isLoading}>
-        {isLoading ? <Spinner /> : "Get Information and Issue VC"}
-      </Button >
-
-    </div>
+    <StepSkeleton
+      stepName="Step 3 - Retrieve info + issue VC"
+      stepDescription="After successful KYC, retrieve verified identity attributes and issue your verifiable credential."
+    >
+      <button
+        type="button"
+        onClick={handleGetInformation}
+        disabled={isLoading}
+        className="mt-6 rounded-md bg-[#00f2ff] px-5 py-3 text-xs font-bold uppercase tracking-[0.2em] text-[#00363a] shadow-[0_0_18px_rgba(0,242,255,0.2)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {isLoading ? "Issuing VC..." : "Get Information and Issue VC"}
+      </button>
+    </StepSkeleton>
   );
 }

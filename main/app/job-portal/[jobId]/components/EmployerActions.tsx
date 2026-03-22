@@ -142,7 +142,7 @@ export default function EmployerActions({ job, employerId, wallet }: FundJobForm
   );
 
   return (
-    <>
+    <div className="space-y-4">
       {fundedState.fundedAt === "N/A" ? (
         // Not funded
         <ActionForm
@@ -164,13 +164,13 @@ export default function EmployerActions({ job, employerId, wallet }: FundJobForm
             hashValue={fundedState.fundedTxHash || "N/A"}
           />
           {refundState.success && (
-            <p className="text-green-600">Payment refunded successfully!</p>
+            <p className="text-sm text-[#7cf39e]">Payment refunded successfully.</p>
           )}
           {refundState.errorMsg && (
-            <p className="text-red-600">{refundState.errorMsg}</p>
+            <p className="text-sm text-red-300">{refundState.errorMsg}</p>
           )}
           <form action={refundAction}>
-            <Button className="bg-red-500">
+            <Button className="w-full bg-red-500 px-4 py-3 text-xs font-bold uppercase tracking-[0.2em]">
               {isRefundPending ? "Refunding..." : "Refund Funded Payment"}
             </Button>
           </form>
@@ -201,20 +201,20 @@ export default function EmployerActions({ job, employerId, wallet }: FundJobForm
       {
         <form action={deleteAction}>
           {deleteJobState.success && (
-            <p className="text-green-600">Job deleted successfully!</p>
+            <p className="mb-2 text-sm text-[#7cf39e]">Job deleted successfully.</p>
           )}
           {deleteJobState.errorMsg && (
-            <p className="text-red-600">{deleteJobState.errorMsg}</p>
+            <p className="mb-2 text-sm text-red-300">{deleteJobState.errorMsg}</p>
           )}
           <Button
             type="submit"
-            className="bg-red-500"
+            className="w-full bg-red-500 px-4 py-3 text-xs font-bold uppercase tracking-[0.2em]"
             disabled={isDeleteJobPending}
           >
             {isDeleteJobPending ? "Deleting Job..." : "Delete Job"}
           </Button>
         </form>
       }
-    </>
+    </div>
   );
 }
