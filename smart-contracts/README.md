@@ -76,11 +76,17 @@ npx hardhat test
 rm -rf ./ignition/deployments/chain-80002
 ```
 
+Also update the env vars if needed
+
+```sh
+npx hardhat keystore set POLYGON_AMOY_RPC_URL
+npx hardhat keystore set POLYGON_AMOY_PRIVATE_KEY
+```
+
 2. Try to deploy
 
 ```sh
-npm run deploy:polygonAmoy
-# or
+npx hardhat compile
 npx hardhat ignition deploy ignition/modules/JobEscrow.ts --network polygonAmoy
 npx hardhat ignition deploy ignition/modules/VCRegistry.ts --network polygonAmoy
 ```

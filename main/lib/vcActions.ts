@@ -137,7 +137,6 @@ export async function checkIsVcValid(
     getProvider(),
   );
 
-  // Use string-based check for compatibility across old/new VCRegistry deployments.
-  const legacyHash = vcHash.startsWith("0x") ? vcHash.slice(2) : vcHash;
-  return await contract.isValid(legacyHash, subjectAddress);
+  // `isValid` expects bytes32. Normalise DB/API hash values to 0x-prefixed 32-byte hex.
+  return await contract.isValid(normaliseVcHash(vcHash), subjectAddress);
 }

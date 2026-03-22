@@ -8,7 +8,7 @@ dataSources:
     source:
       address: "0xDC0F09d74570eb51F27f8EbD3bB93aF8A81a6252"
       abi: JobEscrow
-      startBlock: 35520530
+      startBlock: 35522685
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9

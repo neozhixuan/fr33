@@ -11,7 +11,7 @@ dataSources:
       address: "0xDC0F09d74570eb51F27f8EbD3bB93aF8A81a6252"
       # Check /ignition/deployments/chain-80002/journal.jsonl
       abi: JobEscrow
-      startBlock: 35520688
+      startBlock: 35522685
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
