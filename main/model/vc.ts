@@ -5,13 +5,14 @@ import { VCMetadata, VCStatus, Wallet } from "@/generated/prisma-client";
 export async function createVCMetadataForWallet(
   vcData: VCData,
   wallet: Wallet,
+  txHash: string,
 ): Promise<void> {
   try {
     await prisma.vCMetadata.create({
       data: {
         walletId: wallet.id,
         vcHash: vcData.vcHash,
-        txHash: vcData.txHash,
+        txHash,
         status: VCStatus.VALID,
         issuerDid: vcData.issuerDid,
         subjectDid: `did:ethr:polygon:amoy:${wallet.address}`,

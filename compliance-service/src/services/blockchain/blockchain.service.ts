@@ -1,4 +1,12 @@
-import { getVcRegistryContract } from "../../lib/ether";
+import {
+  getIssuerAuthorisationSigner,
+  getProvider,
+  getVcRegistryReadContract,
+  getVcRegistryWriteContract,
+} from "../../lib/ether";
+import { VCRegistrationAuthorisation } from "../../utils/types";
+
+const ISSUER_AUTHORISATION_VALIDITY_SECONDS = 15 * 60; // 15 minutes
 
 function normaliseVcHash(vcHash: string): `0x${string}` {
   const trimmed = vcHash.trim();
@@ -14,6 +22,17 @@ function normaliseVcHash(vcHash: string): `0x${string}` {
   throw new Error("Invalid VC hash format. Expected a 32-byte hex string");
 }
 
+function didToAddress(subjectDid: string): string {
+  const subjectAddressParts = subjectDid.split(":");
+  if (subjectAddressParts.length !== 5) {
+    throw new Error(
+      "Invalid subject DID format. Expected format: did:ethr:polygon:amoy:<wallet_address>",
+    );
+  }
+
+  return subjectAddressParts[4];
+}
+
 /**
  * Creates a transaction in the chain, to verify the existing status of a VC.
  * @param vcHash - the hash of the VC to be registered
@@ -26,46 +45,80 @@ export async function createVcRegistryTx(
   subjectAddress: string,
   expiry: number,
 ) {
-  let contract;
-  try {
-    contract = await getVcRegistryContract();
-  } catch (error) {
-    console.error(
-      "Error creating VC registry transaction:",
-      (error as Error).message,
-    );
-    throw new Error(
-      "[createVcRegistryTx] Error getting VC registry contract: " +
-        (error as Error).message,
-    );
-  }
+  const normalisedHash = normaliseVcHash(vcHash);
+  const contract = await getVcRegistryWriteContract();
 
-  const subjectAddressParts = subjectAddress.split(":");
-  if (subjectAddressParts.length !== 5) {
-    throw new Error(
-      "Invalid subject DID format. Expected format: did:ethr:polygon:amoy:<wallet_address>",
-    );
-  }
-  const subjectWalletAddress = subjectAddressParts[4];
-  const vcHashBytes32 = normaliseVcHash(vcHash);
-
-  let tx;
   try {
-    console.log(vcHashBytes32, subjectWalletAddress, expiry);
-    tx = await contract.registerCredential(
-      vcHashBytes32,
-      subjectWalletAddress,
+    const tx = await contract.registerCredential(
+      normalisedHash,
+      subjectAddress,
       expiry,
     );
+    const receipt = await tx.wait();
+    return receipt.hash;
   } catch (error) {
-    console.error("Error registering VC:", (error as Error).message);
     throw new Error(
       "[createVcRegistryTx] Error registering VC: " + (error as Error).message,
     );
   }
-  const receipt = await tx.wait();
+}
 
-  return receipt.hash;
+/**
+ * Builds an issuer authorisation signature for user-submitted VC registration.
+ */
+export async function buildVcRegistrationAuthorisation(
+  vcHash: string,
+  subjectDid: string,
+  expiresAt: number,
+): Promise<VCRegistrationAuthorisation> {
+  const subjectAddress = didToAddress(subjectDid);
+  const normalisedHash = normaliseVcHash(vcHash);
+
+  const contract = await getVcRegistryReadContract();
+  const contractAddress = await contract.getAddress();
+
+  const nonce: bigint = await contract.nonces(subjectAddress);
+  const now = Math.floor(Date.now() / 1000);
+  const deadline = now + ISSUER_AUTHORISATION_VALIDITY_SECONDS;
+
+  const network = await getProvider().getNetwork();
+  const chainId = Number(network.chainId);
+
+  const signer = getIssuerAuthorisationSigner();
+
+  const signature = await signer.signTypedData(
+    {
+      name: "VCRegistry",
+      version: "1",
+      chainId,
+      verifyingContract: contractAddress,
+    },
+    {
+      RegisterCredential: [
+        { name: "vcHash", type: "bytes32" },
+        { name: "subject", type: "address" },
+        { name: "expiresAt", type: "uint256" },
+        { name: "nonce", type: "uint256" },
+        { name: "deadline", type: "uint256" },
+      ],
+    },
+    {
+      vcHash: normalisedHash,
+      subject: subjectAddress,
+      expiresAt: BigInt(expiresAt),
+      nonce,
+      deadline: BigInt(deadline),
+    },
+  );
+
+  return {
+    vcHash: normalisedHash,
+    subjectAddress,
+    expiresAt: expiresAt.toString(),
+    nonce: nonce.toString(),
+    deadline: deadline.toString(),
+    signature,
+  };
 }
 
 /**
@@ -74,25 +127,18 @@ export async function createVcRegistryTx(
  * @returns blockchain transaction hash
  */
 export async function revokeVcRegistryTx(vcHash: string) {
-  let contract;
-  try {
-    contract = await getVcRegistryContract();
-  } catch (error) {
-    throw new Error(
-      "[revokeVcRegistryTx] Error getting VC registry contract: " +
-        (error as Error).message,
-    );
-  }
+  const contract = await getVcRegistryWriteContract();
 
-  let tx;
   try {
-    tx = await contract.revokeCredential(vcHash);
+    const trimmed = vcHash.trim();
+    const tx = /^0x[0-9a-fA-F]{64}$/.test(trimmed)
+      ? await contract.revokeCredentialHash(trimmed)
+      : await contract.revokeCredential(trimmed);
+    const receipt = await tx.wait();
+    return receipt.hash;
   } catch (error) {
     throw new Error(
       "[revokeVcRegistryTx] Error revoking VC: " + (error as Error).message,
     );
   }
-
-  const receipt = await tx.wait();
-  return receipt.hash;
 }

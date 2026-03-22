@@ -11,13 +11,22 @@ export type KycDataDTO = {
 };
 
 // VC Data
+export type VCRegistrationAuthorisation = {
+  vcHash: string;
+  subjectAddress: string;
+  expiresAt: string;
+  nonce: string;
+  deadline: string;
+  signature: string;
+};
+
 export type VCData = {
   vc: string;
   vcHash: string;
-  txHash: string;
   issuedAt: string;
   expiresAt: string;
   issuerDid: string;
+  registrationAuthorisation: VCRegistrationAuthorisation | null;
 };
 
 export type IssueVCResponse = VCData & ExecutionResult;
