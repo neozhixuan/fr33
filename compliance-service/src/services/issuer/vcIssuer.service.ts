@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import crypto from "crypto";
+import { keccak256, toUtf8Bytes } from "ethers";
 import { IssueVCParams, VCResult } from "../../utils/types";
 import { createVcRegistryTx } from "../blockchain/blockchain.service";
 import { getIssuerWallet } from "../../lib/ether";
@@ -34,8 +34,8 @@ export async function issueVC(params: IssueVCParams): Promise<VCResult> {
       algorithm: "ES256",
     });
 
-    // Hash VC for reference
-    const vcHash = crypto.createHash("sha256").update(signedVC).digest("hex");
+    // Hash VC for on-chain anchoring (bytes32, Ethereum keccak256)
+    const vcHash = keccak256(toUtf8Bytes(signedVC));
 
     // Upload VC data into the blockchain
     const txHash = await createVcRegistryTx(vcHash, params.subjectDid, exp);

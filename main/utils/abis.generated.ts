@@ -459,11 +459,11 @@ export const VCRegistry_ABI = [
       {
         "indexed": false,
         "internalType": "bool",
-        "name": "isAuthorized",
+        "name": "isAuthorised",
         "type": "bool"
       }
     ],
-    "name": "IssuerAuthorizationUpdated",
+    "name": "IssuerAuthorisationUpdated",
     "type": "event"
   },
   {
@@ -569,7 +569,7 @@ export const VCRegistry_ABI = [
         "type": "address"
       }
     ],
-    "name": "authorizedIssuers",
+    "name": "authorisedIssuers",
     "outputs": [
       {
         "internalType": "bool",
@@ -617,9 +617,50 @@ export const VCRegistry_ABI = [
   {
     "inputs": [
       {
-        "internalType": "string",
+        "internalType": "bytes32",
         "name": "vcHash",
-        "type": "string"
+        "type": "bytes32"
+      }
+    ],
+    "name": "getCredential",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "subject",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "issuer",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "expiresAt",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "isRevoked",
+            "type": "bool"
+          }
+        ],
+        "internalType": "struct VCRegistry.Credential",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "vcHash",
+        "type": "bytes32"
       },
       {
         "internalType": "address",
@@ -674,9 +715,9 @@ export const VCRegistry_ABI = [
   {
     "inputs": [
       {
-        "internalType": "string",
+        "internalType": "bytes32",
         "name": "vcHash",
-        "type": "string"
+        "type": "bytes32"
       },
       {
         "internalType": "address",
@@ -704,9 +745,9 @@ export const VCRegistry_ABI = [
   {
     "inputs": [
       {
-        "internalType": "string",
+        "internalType": "bytes32",
         "name": "vcHash",
-        "type": "string"
+        "type": "bytes32"
       }
     ],
     "name": "revokeCredential",
@@ -723,11 +764,11 @@ export const VCRegistry_ABI = [
       },
       {
         "internalType": "bool",
-        "name": "isAuthorized",
+        "name": "isAuthorised",
         "type": "bool"
       }
     ],
-    "name": "setAuthorizedIssuer",
+    "name": "setAuthorisedIssuer",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
