@@ -210,85 +210,124 @@ Users will then be authenticated upon each gated action.
 
 ## Setup
 
-### Prerequisites:
+### Prerequisites
 
-1. Node v22.20.0
+1. Node.js 22.x
+2. Docker Desktop (for local Graph Node + IPFS)
+3. PostgreSQL running locally
+4. Polygon Amoy RPC URL (Alchemy/Infura/etc)
 
-```sh
-# For macOS or Linux users
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
-nvm install 22
-nvm use 22
-```
-
-2. Hardhat v3 with Ethers.js integration and Mocha testing framework
-
-```sh
-npm install --save-dev hardhat
-```
-
-3. Solidity 0.8.28
-
-### Steps to Set Up the Project:
-
-1. Clone the repository:
+### 1) Clone + install
 
 ```sh
 git clone https://github.com/neozhixuan/fr33.git
-```
-
-2. Install dependencies:
-
-```sh
-# This installs dependencies from all folders' (FE, BE and Blockchain) package.json due to the "workspaces" field in package.json and compiles it to a single node_modules/
-# Install all dependencies (root + all workspaces)
+cd fr33
 npm install
-
-# Build everything
-npm run build
 ```
 
-3. Set up your environment variables:
+### 2) Configure environment files
 
-   - Create a `.env` file in the `/smart-contracts` directory.
-   - Add your Polygon testnet RPC URL and private key:
-     ```
-     POLYGON_RPC_URL=your_polygon_amoy_rpc_url
-     PRIVATE_KEY=your_private_key
-     ```
-   - Copy the `.env.example` file in the `/compliance-service` directory and update all necessary environment variables.
-     ```
-     cp .env.example .env
-     ```
+#### Main service
 
-4. Set up the database:
+1. Copy [main/.env.example](main/.env.example) to `main/.env`
+2. Fill at minimum:
+   - `NEXT_POSTGRES_URL`
+   - `NEXT_RPC_URL`
+   - `NEXT_ESCROW_CONTRACT_ADDRESS`
+   - `NEXT_VC_REGISTRY_ADDRESS`
+   - Alchemy values (`NEXT_ALCHEMY_API_KEY`, `NEXT_ALCHEMY_GAS_POLICY_ID`)
 
-   - Create a PostgreSQL database.
-   - Copy the `.env.example` file in the `/main` directory and update the NEXT_POSTGRES_URL key with your connection string.
-     ```
-     cp .env.example .env
-     ```
+#### Compliance service
 
-5. Set up Prisma:
+1. Copy [compliance-service/.env.example](compliance-service/.env.example) to `compliance-service/.env`
+2. Fill at minimum:
+   - `POSTGRES_URL`
+   - `RPC_URL`
+   - `VC_REGISTRY_ADDRESS`
+   - `ISSUER_PRIVATE_KEY`
+   - `VC_SIGNING_PRIVATE_KEY`
+   - `COMPLIANCE_SUBGRAPH_URL=http://127.0.0.1:8000/subgraphs/name/fr33/job-escrow`
 
-   - Run Prisma migrations to set up the database schema:
-     ```sh
-     npx prisma migrate dev
-     ```
+#### Subgraph
 
-6. Run everything
+1. Copy [smart-contracts/subgraph/.env.example](smart-contracts/subgraph/.env.example) to `smart-contracts/subgraph/.env`
+2. Fill:
+   - `POLYGON_AMOY_RPC_URL`
+
+### 3) Deploy contracts (Amoy)
+
+From [smart-contracts](smart-contracts):
 
 ```sh
-# Ensure that postgres is alive. My postgres username is `postgres`
-psql -U postgres
+npm run build
+npm run deploy:polygonAmoy
+```
 
-# Test everything
-npm run test
+Then copy deployed addresses from [smart-contracts/ignition/deployments/chain-80002/deployed_addresses.json](smart-contracts/ignition/deployments/chain-80002/deployed_addresses.json) into:
 
-# Work on specific parts
+- `NEXT_ESCROW_CONTRACT_ADDRESS` (main)
+- `NEXT_VC_REGISTRY_ADDRESS` (main)
+- `VC_REGISTRY_ADDRESS` (compliance-service)
+
+### 4) Set up Prisma schemas (both services)
+
+From repo root:
+
+```sh
+cd main
+npm run prisma-setup
+cd ../compliance-service
+npm run prisma-setup
+cd ..
+```
+
+Notes:
+
+- Main service uses schema `app_service`
+- Compliance service uses schemas `issuer_service` and `compliance_service`
+
+### 5) Start local subgraph stack + deploy subgraph
+
+From repo root:
+
+```sh
+npm run subgraph:stack:up
+npm run subgraph:deploy-local
+```
+
+What this does:
+
+- Starts local Graph Node + IPFS + subgraph Postgres (Docker)
+- Auto-sets subgraph `startBlock` near latest block (demo-friendly)
+- Builds and deploys the subgraph
+
+If graph-node fails with DB locale error, run once:
+
+```sh
+cd smart-contracts/subgraph
+docker compose down -v
+npm run stack:up
+cd ../..
+```
+
+### 6) Start services
+
+Use 2 terminals from repo root:
+
+```sh
+# Terminal A
 npm run dev:main
+
+# Terminal B
 npm run dev:compliance
 ```
+
+### 7) Smoke checks
+
+1. Subgraph GraphQL endpoint responds:
+   - `http://127.0.0.1:8000/subgraphs/name/fr33/job-escrow`
+2. Compliance service starts and monitor logs appear
+3. Perform escrow actions (fund/cancel/accept/release) and verify events are ingested
 
 ## Debugging issues
 

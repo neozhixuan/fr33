@@ -5,12 +5,15 @@
   "main": "jest.config.js",
   "scripts": {
     "test": "echo \"No test specified\" && exit 0",
+    "predev": "npm run prisma:generate",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.ts",
+    "start": "node dist/index.js",
     "prisma:generate": "prisma generate --schema=./prisma/schema.prisma",
     "prisma:migrate": "prisma migrate dev --schema=./prisma/schema.prisma",
-    "prisma:migrate:reset": "prisma migrate reset --schema=./prisma/schema.prisma --force"
+    "prisma:push": "prisma db push --schema=./prisma/schema.prisma",
+    "prisma:migrate:reset": "prisma migrate reset --schema=./prisma/schema.prisma --force",
+    "prisma-setup": "npm run prisma:generate && npm run prisma:push"
   },
   "keywords": [],
   "author": "",

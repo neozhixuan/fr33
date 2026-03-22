@@ -67,3 +67,32 @@ export async function createVcRegistryTx(
 
   return receipt.hash;
 }
+
+/**
+ * Revokes a credential hash from chain so escrow-critical actions can be blocked.
+ * @param vcHash hash string of VC (the unhashed SHA-256 string used during registerCredential)
+ * @returns blockchain transaction hash
+ */
+export async function revokeVcRegistryTx(vcHash: string) {
+  let contract;
+  try {
+    contract = await getVcRegistryContract();
+  } catch (error) {
+    throw new Error(
+      "[revokeVcRegistryTx] Error getting VC registry contract: " +
+        (error as Error).message,
+    );
+  }
+
+  let tx;
+  try {
+    tx = await contract.revokeCredential(vcHash);
+  } catch (error) {
+    throw new Error(
+      "[revokeVcRegistryTx] Error revoking VC: " + (error as Error).message,
+    );
+  }
+
+  const receipt = await tx.wait();
+  return receipt.hash;
+}
