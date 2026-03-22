@@ -85,7 +85,7 @@ npx hardhat ignition deploy ignition/modules/JobEscrow.ts --network polygonAmoy
 npx hardhat ignition deploy ignition/modules/VCRegistry.ts --network polygonAmoy
 ```
 
-TLDR: Creates the /deployments folder
+TLDR: Creates the ignition/deployments folder
 
 ```sh
 > smart-contracts@1.0.0 deploy:polygonAmoy
@@ -109,7 +109,7 @@ Deployed Addresses
 JobEscrowModule#JobEscrow - 0xf92e8E9b3BE190a4bF7bdcC19e9f10094C712481
 ```
 
-3. Remember to update the ABIs (TODO: shld be more effecient..)
+3. Remember to update the ABIs
 
 4. Debug
 

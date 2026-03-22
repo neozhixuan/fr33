@@ -1,0 +1,29 @@
+type Job @entity(immutable: false) {
+  id: ID!
+  jobId: BigInt!
+  employer: Bytes!
+  worker: Bytes
+  amount: BigInt!
+  state: String!
+  createdAt: BigInt!
+  createdTxHash: Bytes!
+  createdBlockNumber: BigInt!
+  updatedAt: BigInt!
+  updatedBlockNumber: BigInt!
+  releasedAt: BigInt
+  cancelledAt: BigInt
+}
+
+type EscrowEvent @entity(immutable: true) {
+  id: ID!
+  job: Job!
+  jobId: BigInt!
+  eventType: String!
+  wallet: Bytes
+  counterparty: Bytes
+  amount: BigInt
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  logIndex: BigInt!
+}
