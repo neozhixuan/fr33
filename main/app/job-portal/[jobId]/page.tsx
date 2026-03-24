@@ -1,7 +1,6 @@
 "use server";
 
 import { JobStatus, UserRole } from "@/generated/prisma-client";
-import CentralContainer from "@/layout/CentralContainer";
 import { getJobDetailsAction } from "@/lib/jobActions";
 import { auth } from "@/server/auth";
 import { getFallbackURL } from "@/utils/errors";
@@ -42,71 +41,97 @@ export default async function JobPage({ params }: JobPageProps) {
         : Number(job.amount),
   };
 
+  const workerCanAct =
+    user.role === UserRole.WORKER &&
+    (job.status === JobStatus.FUNDED ||
+      job.status === JobStatus.IN_PROGRESS ||
+      job.status === JobStatus.PENDING_APPROVAL);
+
   return (
-    <CentralContainer>
-      <Button href="/job-portal">Back to Job Portal</Button>
-
-      <MainJobSection job={jobForClient} />
-
-      {/* Employer Actions */}
-      {userId === job.employerId && (
-        <div className="flex flex-col gap-4 w-[300px] border rounded-lg p-4">
-          <strong>Employer Actions</strong>
-          {wallet ? (
-            <>
-
-              <p className="break-words">
-                Employer wallet:{" "}
-                <a
-                  href={`https://amoy.polygonscan.com/address/${wallet.address}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-decoration-line text-blue-900"
-                >
-                  {wallet.address}
-                </a>
-              </p>
-              <EmployerActions job={jobForClient} employerId={userId} wallet={wallet} />
-            </>) : (
-            <p>Unexpected Error: No wallet linked</p>
-          )}
-
+    <main className="min-h-screen bg-[#131314] px-6 pb-14 pt-8 text-[#e5e2e3] md:px-8">
+      <div className="mx-auto w-full max-w-[1400px] space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Button
+            href="/job-portal"
+            className="cursor-pointer border border-white/20 bg-transparent px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-[#e5e2e3] my-5"
+          >
+            ← Back to Job Portal
+          </Button>
+          <p className="text-xs uppercase tracking-[0.2em] text-[#b9cacb]">
+            Role: <span className="text-[#00f2ff]">{user.role.toLowerCase()}</span>
+          </p>
         </div>
-      )}
 
-      {/* Worker Actions (when job is funded) */}
-      {/* TODO: Cleanup */}
-      {user.role === UserRole.WORKER &&
-        (job.status === JobStatus.FUNDED ||
-          job.status === JobStatus.IN_PROGRESS ||
-          job.status === JobStatus.PENDING_APPROVAL) && (
-          <div className="flex flex-col gap-4 w-[300px] border rounded-lg p-4">
-            <strong>Worker Actions</strong>
-            {wallet ? (
-              <><p className="break-words">
-                Worker wallet:{" "}
-                <a
-                  href={`https://amoy.polygonscan.com/address/${wallet.address}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-decoration-line text-blue-900"
-                >
-                  {wallet.address}
-                </a>
-              </p>
-                <WorkerActions
-                  job={jobForClient}
-                  workerId={userId}
-                  workerWallet={wallet}
-                />
-              </>
-            ) : (
-              <p>Unexpected Error: No wallet linked</p>
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+          <div className="xl:col-span-8">
+            <MainJobSection job={jobForClient} />
+          </div>
+
+          <aside className="space-y-6 xl:col-span-4">
+            {userId === job.employerId && (
+              <section className="rounded-xl border border-[#00f2ff]/15 bg-[#1c1b1c]/80 p-5">
+                <h2 className="mb-2 text-sm font-bold uppercase tracking-[0.2em] text-[#00f2ff]">
+                  Employer Actions
+                </h2>
+                {wallet ? (
+                  <>
+                    <p className="mb-4 text-xs text-[#b9cacb]">Use these controls to fund, approve release, or cancel the job.</p>
+                    <p className="mb-4 break-all text-xs text-[#b9cacb]">
+                      Wallet:{" "}
+                      <a
+                        href={`https://amoy.polygonscan.com/address/${wallet.address}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#00f2ff] hover:underline"
+                      >
+                        {wallet.address}
+                      </a>
+                    </p>
+                    <EmployerActions
+                      job={jobForClient}
+                      employerId={userId}
+                      wallet={wallet}
+                    />
+                  </>
+                ) : (
+                  <p className="text-sm text-red-300">Unexpected error: no wallet linked.</p>
+                )}
+              </section>
             )}
 
-            <p></p>
-          </div>
-        )}
-    </CentralContainer>
+            {workerCanAct && (
+              <section className="rounded-xl border border-[#00f2ff]/15 bg-[#1c1b1c]/80 p-5">
+                <h2 className="mb-2 text-sm font-bold uppercase tracking-[0.2em] text-[#00f2ff]">
+                  Worker Actions
+                </h2>
+                {wallet ? (
+                  <>
+                    <p className="mb-4 text-xs text-[#b9cacb]">Accept the assignment and request fund release when work is complete.</p>
+                    <p className="mb-4 break-all text-xs text-[#b9cacb]">
+                      Wallet:{" "}
+                      <a
+                        href={`https://amoy.polygonscan.com/address/${wallet.address}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#00f2ff] hover:underline"
+                      >
+                        {wallet.address}
+                      </a>
+                    </p>
+                    <WorkerActions
+                      job={jobForClient}
+                      workerId={userId}
+                      workerWallet={wallet}
+                    />
+                  </>
+                ) : (
+                  <p className="text-sm text-red-300">Unexpected error: no wallet linked.</p>
+                )}
+              </section>
+            )}
+          </aside>
+        </div>
+      </div>
+    </main>
   );
 }

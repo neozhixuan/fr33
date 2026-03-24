@@ -1,3 +1,4 @@
+import { Wallet } from "@/generated/prisma-client";
 import { POL_TO_SGD_RATE } from "@/utils/constants";
 import { ethers } from "ethers";
 
@@ -48,4 +49,17 @@ export function parseSGDToPolygon(amountInSGD: string): bigint {
   return ethers.parseEther(
     (parseFloat(amountInSGD) * POL_TO_SGD_RATE).toString(),
   );
+}
+
+// Retrieve a user's wallet balance in POL and format it for display
+export async function getUserWalletPolygonValue(
+  wallet: Wallet,
+): Promise<string> {
+  const provider = getProvider();
+  const rawBalance = await provider.getBalance(wallet.address);
+  const formatted = Number(ethers.formatEther(rawBalance));
+  return `${formatted.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6,
+  })} POL`;
 }

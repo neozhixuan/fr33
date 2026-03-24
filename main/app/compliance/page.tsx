@@ -1,4 +1,3 @@
-import CentralContainer from "@/layout/CentralContainer";
 import { getUserOnboardingStatus } from "@/model/user";
 import { stringToInt } from "@/utils/conv";
 import { ERROR_TYPE_MAP, getFallbackURL } from "@/utils/errors";
@@ -22,9 +21,10 @@ export default async function CompliancePage() {
   const onboardingStatus = await getUserOnboardingStatus(userId);
 
   return (
-    <CentralContainer>
-      <h1>Compliance Page</h1>
-      <ComplianceContent initialStage={onboardingStatus} userId={userId} />
-    </CentralContainer>
+    <main className="min-h-screen bg-[#131314] px-6 pb-14 pt-8 text-[#e5e2e3] selection:bg-[#00f2ff] selection:text-[#00363a] md:px-8">
+      <div className="mx-auto w-full max-w-[1200px]">
+        <ComplianceContent initialStage={onboardingStatus} userId={userId} />
+      </div>
+    </main>
   );
 }
