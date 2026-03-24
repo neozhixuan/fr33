@@ -30,8 +30,19 @@ contract JobEscrow is Pausable, ReentrancyGuard {
         bool isFrozen;
     }
 
+    struct ResolutionRecord {
+        DisputeResolution resolution;
+        uint16 workerShareBps;
+        uint256 workerAmount;
+        uint256 employerAmount;
+        string reason;
+        uint256 resolvedAt;
+        bool exists;
+    }
+
     // Public variables (have an automatic getter function)
     mapping(uint256 => Job) public jobs; // Dictionary of ID to Job
+    mapping(uint256 => ResolutionRecord) private disputeResolutions;
     uint256 public jobCounter;
     address public admin;
 
@@ -60,7 +71,8 @@ contract JobEscrow is Pausable, ReentrancyGuard {
         DisputeResolution resolution,
         uint16 workerShareBps,
         uint256 workerAmount,
-        uint256 employerAmount
+        uint256 employerAmount,
+        string reason
     );
     event TimeoutAutoReleaseExecuted(
         uint256 indexed jobId,
@@ -247,6 +259,10 @@ contract JobEscrow is Pausable, ReentrancyGuard {
         );
     }
 
+    /*
+    @title Open a dispute for a job, which freezes the escrow and prevents further actions until resolved
+    @param jobId - The unique ID for the job
+    */
     function openDispute(
         uint256 jobId
     ) external jobExists(jobId) whenNotPaused {
@@ -269,6 +285,10 @@ contract JobEscrow is Pausable, ReentrancyGuard {
         emit DisputeOpened(jobId, msg.sender);
     }
 
+    /*
+    @title Admin freezes the escrow and prevents further actions until resolved
+    @param jobId - The unique ID for the job
+    */
     function adminFreezeEscrow(
         uint256 jobId
     ) external onlyAdmin jobExists(jobId) whenNotPaused {
@@ -286,16 +306,22 @@ contract JobEscrow is Pausable, ReentrancyGuard {
         emit EscrowFrozen(jobId, msg.sender);
     }
 
+    /*
+    @title Resolve a dispute for a job, which unfreezes the escrow and allows further actions based on the resolution
+    @param jobId - The unique ID for the job
+    */
     function resolveDispute(
         uint256 jobId,
         DisputeResolution resolution,
-        uint16 workerShareBps
+        uint16 workerShareBps,
+        string calldata reason
     ) external onlyAdmin jobExists(jobId) whenNotPaused nonReentrant {
         Job storage job = jobs[jobId];
         require(job.state == JobState.DISPUTED, "Job not disputed");
         require(job.isFrozen, "Escrow not frozen");
         require(job.amount > 0, "No funds to resolve");
         require(job.worker != address(0), "Worker not set");
+        require(bytes(reason).length > 0, "Reason required");
 
         uint256 amount = job.amount;
         uint256 workerAmount = 0;
@@ -329,16 +355,59 @@ contract JobEscrow is Pausable, ReentrancyGuard {
             require(employerSuccess, "Refund to employer failed");
         }
 
+        disputeResolutions[jobId] = ResolutionRecord({
+            resolution: resolution,
+            workerShareBps: workerShareBps,
+            workerAmount: workerAmount,
+            employerAmount: employerAmount,
+            reason: reason,
+            resolvedAt: block.timestamp,
+            exists: true
+        });
+
         emit DisputeResolved(
             jobId,
             resolution,
             workerShareBps,
             workerAmount,
-            employerAmount
+            employerAmount,
+            reason
         );
         emit EscrowUnfrozen(jobId, msg.sender);
     }
 
+    function getDisputeResolution(
+        uint256 jobId
+    )
+        external
+        view
+        returns (
+            DisputeResolution resolution,
+            uint16 workerShareBps,
+            uint256 workerAmount,
+            uint256 employerAmount,
+            string memory reason,
+            uint256 resolvedAt,
+            bool exists
+        )
+    {
+        ResolutionRecord memory record = disputeResolutions[jobId];
+        return (
+            record.resolution,
+            record.workerShareBps,
+            record.workerAmount,
+            record.employerAmount,
+            record.reason,
+            record.resolvedAt,
+            record.exists
+        );
+    }
+
+    /*
+    @title Automatically release funds to worker if employer fails to respond within the timeout period after release
+    @param jobId - The unique ID for the job
+    @param timeoutSeconds - The number of seconds to wait after release request before allowing auto-release
+    */
     function autoReleaseAfterTimeout(
         uint256 jobId,
         uint256 timeoutSeconds
@@ -368,6 +437,12 @@ contract JobEscrow is Pausable, ReentrancyGuard {
         emit TimeoutAutoReleaseExecuted(jobId, msg.sender, amount, deadline);
     }
 
+    /*
+    @title Get the release deadline timestamp for a job based on the release request time and timeout period
+    @param jobId - The unique ID for the job
+    @param timeoutSeconds - The number of seconds to wait after release request before auto-release can be executed
+    @return deadline The timestamp when auto-release can be executed, or 0 if release has not been requested
+    */
     function getReleaseDeadline(
         uint256 jobId,
         uint256 timeoutSeconds

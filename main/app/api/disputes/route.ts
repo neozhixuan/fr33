@@ -5,18 +5,10 @@ import {
   listOpenDisputesAdminAction,
 } from "@/lib/disputeActions";
 import { auth } from "@/server/auth";
+import { getSessionUserId } from "@/utils/disputeUtils";
 
-function getSessionUserId(
-  session: { user?: { id?: string | null } } | null,
-): number {
-  const raw = session?.user?.id;
-  const parsed = Number(raw);
-  if (!raw || !Number.isInteger(parsed) || parsed <= 0) {
-    throw new Error("Unauthorized");
-  }
-  return parsed;
-}
-
+// API: Endpoint to list disputes for the authenticated user, with optional admin scope to list all open disputes.
+// USAGE: GET /api/disputes?scope=my (default) or scope=admin
 export async function GET(req: NextRequest) {
   try {
     const session = await auth();
@@ -39,6 +31,8 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// API: Endpoint for users to create a new dispute for a specific job, with validation and error handling
+// USAGE: POST /api/disputes with JSON body { jobId: number, reason: string }
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();

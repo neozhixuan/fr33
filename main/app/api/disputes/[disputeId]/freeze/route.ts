@@ -1,18 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/server/auth";
 import { adminFreezeDisputeEscrowAction } from "@/lib/disputeActions";
+import { getSessionUserId } from "@/utils/disputeUtils";
 
-function getSessionUserId(
-  session: { user?: { id?: string | null } } | null,
-): number {
-  const raw = session?.user?.id;
-  const parsed = Number(raw);
-  if (!raw || !Number.isInteger(parsed) || parsed <= 0) {
-    throw new Error("Unauthorized");
-  }
-  return parsed;
-}
-
+// API: Admin endpoint to freeze the escrow for a dispute, preventing any further actions until reviewed.
+// USAGE: POST /api/disputes/[disputeId]/freeze
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ disputeId: string }> },

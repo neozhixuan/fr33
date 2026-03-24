@@ -3,12 +3,23 @@
 import { JobStatus, UserRole } from "@/generated/prisma-client";
 import { getJobDetails } from "@/model/job";
 import {
-  addAdminReviewNote,
-  addDisputeAuditLog,
   addDisputeEvidence,
   assertDisputeParticipant,
   createDisputeAfterFreeze,
-  getDisputeAuditTrail,
+  markDisputeOnchainResolutionFailed,
+  markDisputeOnchainResolved,
+  markDisputeFrozenByAdmin,
+  markJobTimeoutAutoReleased,
+  setDisputeDecisionPendingOnchain,
+} from "@/model/disputePost";
+import {
+  DISPUTE_OUTCOME_TO_CONTRACT_ENUM,
+  getFundReleaseTimeoutSeconds,
+} from "@/utils/disputeUtils";
+import { executeJobTransaction } from "@/utils/aaUtils";
+import { executeAdminEscrowTransaction } from "@/lib/escrowActions";
+import { prisma } from "@/lib/db";
+import {
   getDisputeByIdBasic,
   getDisputeDetails,
   getTimeoutEligibleJobs,
@@ -16,24 +27,60 @@ import {
   hasActiveDisputeForJob,
   listDisputesForUser,
   listOpenDisputes,
-  markDisputeOnchainResolutionFailed,
-  markDisputeOnchainResolved,
-  markDisputeFrozenByAdmin,
-  markJobTimeoutAutoReleased,
-  setDisputeDecisionPendingOnchain,
-} from "@/model/dispute";
-import {
-  DISPUTE_OUTCOME_TO_CONTRACT_ENUM,
-  DisputeEvidenceType,
-  DisputeOutcome,
-  getFundReleaseTimeoutSeconds,
-} from "@/utils/dispute";
-import {
-  executeAdminEscrowTransaction,
-  executeJobTransaction,
-} from "@/utils/aaUtils";
-import { prisma } from "@/lib/db";
+} from "@/model/disputeGet";
+import { DisputeEvidenceType, DisputeOutcome } from "@/type/disputeTypes";
 
+// Get the list of disputes that the user is involved in, either as an employer, worker, or admin
+export async function listMyDisputesAction(userId: number) {
+  return listDisputesForUser(userId);
+}
+
+// Get all the disputes for this jobId
+async function getDisputeByJobIdAction(jobId: number) {
+  const open = await listOpenDisputes();
+  return open.find((d) => d.jobId === jobId) ?? null;
+}
+
+// Get the details of a dispute, ensuring that the requesting user is either a participant in the dispute or an admin
+export async function getDisputeDetailsForUserAction(params: {
+  disputeId: number;
+  userId: number;
+  allowAdmin?: boolean;
+}) {
+  const { disputeId, userId, allowAdmin = false } = params;
+  const userContext = await getUserDisputeContext(userId);
+
+  if (!userContext) {
+    throw new Error("User not found");
+  }
+
+  if (allowAdmin && userContext.role === UserRole.ADMIN) {
+    const details = await getDisputeDetails(disputeId);
+    if (!details) throw new Error("Dispute not found");
+    return details;
+  }
+
+  await assertDisputeParticipant({ disputeId, userId });
+  const details = await getDisputeDetails(disputeId);
+  if (!details) throw new Error("Dispute not found");
+  return details;
+}
+
+// Get the list of all open disputes for admin users to review and take action on
+export async function listOpenDisputesAdminAction(adminUserId: number) {
+  const userContext = await getUserDisputeContext(adminUserId);
+  if (!userContext || userContext.role !== UserRole.ADMIN) {
+    throw new Error("Unauthorized: admin access required");
+  }
+
+  return listOpenDisputes();
+}
+
+/**
+ * Create a dispute for a job, which involves freezing the escrow on-chain and creating a dispute record in the database.
+ * @param params - An object containing the jobId, userId of the person initiating the dispute, and an optional reason for the dispute.
+ * @returns An object indicating success, the dispute details, and transaction hashes if the on-chain operation was successful.
+ */
 export async function createDisputeAction(params: {
   jobId: number;
   userId: number;
@@ -109,11 +156,7 @@ export async function createDisputeAction(params: {
   };
 }
 
-export async function getDisputeByJobIdAction(jobId: number) {
-  const open = await listOpenDisputes();
-  return open.find((d) => d.jobId === jobId) ?? null;
-}
-
+// Create evidence for an existing dispute, recording the evidence in the database
 export async function submitDisputeEvidenceAction(params: {
   disputeId: number;
   userId: number;
@@ -160,64 +203,7 @@ export async function submitDisputeEvidenceAction(params: {
   };
 }
 
-export async function listMyDisputesAction(userId: number) {
-  return listDisputesForUser(userId);
-}
-
-export async function getDisputeDetailsForUserAction(params: {
-  disputeId: number;
-  userId: number;
-  allowAdmin?: boolean;
-}) {
-  const { disputeId, userId, allowAdmin = false } = params;
-  const userContext = await getUserDisputeContext(userId);
-
-  if (!userContext) {
-    throw new Error("User not found");
-  }
-
-  if (allowAdmin && userContext.role === UserRole.ADMIN) {
-    const details = await getDisputeDetails(disputeId);
-    if (!details) throw new Error("Dispute not found");
-    return details;
-  }
-
-  await assertDisputeParticipant({ disputeId, userId });
-  const details = await getDisputeDetails(disputeId);
-  if (!details) throw new Error("Dispute not found");
-  return details;
-}
-
-export async function listOpenDisputesAdminAction(adminUserId: number) {
-  const userContext = await getUserDisputeContext(adminUserId);
-  if (!userContext || userContext.role !== UserRole.ADMIN) {
-    throw new Error("Unauthorized: admin access required");
-  }
-
-  return listOpenDisputes();
-}
-
-export async function addDisputeReviewNoteAction(params: {
-  disputeId: number;
-  adminUserId: number;
-  note: string;
-}) {
-  const { disputeId, adminUserId, note } = params;
-  const userContext = await getUserDisputeContext(adminUserId);
-
-  if (!userContext || userContext.role !== UserRole.ADMIN) {
-    throw new Error("Unauthorized: admin access required");
-  }
-
-  if (!note.trim()) {
-    throw new Error("Review note cannot be empty");
-  }
-
-  await addAdminReviewNote({ disputeId, adminUserId, note: note.trim() });
-
-  return { success: true };
-}
-
+// Decide a dispute by submitting the decision on-chain and updating the dispute status in the database. Only admins can perform this action.
 export async function decideDisputeAction(params: {
   disputeId: number;
   adminUserId: number;
@@ -273,14 +259,18 @@ export async function decideDisputeAction(params: {
     workerShareBps: outcome === "SPLIT" ? workerShareBps : null,
   });
 
-  await addDisputeAuditLog({
-    disputeId,
-    actionType: "ONCHAIN_RESOLUTION_SUBMITTED",
-    actorUserId: adminUserId,
-    actorRole: UserRole.ADMIN,
-    metadata: {
-      outcome,
-      workerShareBps: outcome === "SPLIT" ? workerShareBps ?? 0 : 0,
+  await prisma.auditLog.create({
+    data: {
+      userId: adminUserId,
+      action: "ONCHAIN_RESOLUTION_SUBMITTED",
+      result: "ALLOWED",
+      metadata: {
+        disputeId,
+        actorRole: UserRole.ADMIN,
+        outcome,
+        workerShareBps: outcome === "SPLIT" ? workerShareBps ?? 0 : 0,
+        rationale,
+      },
     },
   });
 
@@ -290,6 +280,7 @@ export async function decideDisputeAction(params: {
       dispute.jobId,
       DISPUTE_OUTCOME_TO_CONTRACT_ENUM[outcome],
       BigInt(outcome === "SPLIT" ? workerShareBps ?? 0 : 0),
+      rationale,
     ],
   });
 
@@ -316,6 +307,8 @@ export async function decideDisputeAction(params: {
   };
 }
 
+// Admin action to freeze the escrow of a disputed job on-chain, which can be used in cases where the admin
+// wants to intervene before making a final decision. Only admins can perform this action.
 export async function adminFreezeDisputeEscrowAction(params: {
   disputeId: number;
   adminUserId: number;
@@ -331,12 +324,17 @@ export async function adminFreezeDisputeEscrowAction(params: {
     throw new Error("Dispute not found");
   }
 
-  await addDisputeAuditLog({
-    disputeId,
-    actionType: "ESCROW_FREEZE_REQUESTED",
-    actorUserId: adminUserId,
-    actorRole: UserRole.ADMIN,
-    metadata: { initiatedBy: "admin" },
+  await prisma.auditLog.create({
+    data: {
+      userId: adminUserId,
+      action: "ESCROW_FREEZE_REQUESTED",
+      result: "ALLOWED",
+      metadata: {
+        disputeId,
+        actorRole: UserRole.ADMIN,
+        initiatedBy: "admin",
+      },
+    },
   });
 
   const tx = await executeAdminEscrowTransaction({
@@ -345,12 +343,17 @@ export async function adminFreezeDisputeEscrowAction(params: {
   });
 
   if (!tx.success) {
-    await addDisputeAuditLog({
-      disputeId,
-      actionType: "ESCROW_FREEZE_FAILED",
-      actorUserId: adminUserId,
-      actorRole: UserRole.ADMIN,
-      metadata: { error: tx.errorMsg || "Unknown error" },
+    await prisma.auditLog.create({
+      data: {
+        userId: adminUserId,
+        action: "ESCROW_FREEZE_FAILED",
+        result: "BLOCKED",
+        metadata: {
+          disputeId,
+          actorRole: UserRole.ADMIN,
+          error: tx.errorMsg || "Unknown error",
+        },
+      },
     });
     throw new Error(tx.errorMsg || "Failed to freeze escrow on-chain");
   }
@@ -368,24 +371,10 @@ export async function adminFreezeDisputeEscrowAction(params: {
   };
 }
 
-export async function getDisputeAuditTrailAction(params: {
-  disputeId: number;
-  userId: number;
-  allowAdmin?: boolean;
-}) {
-  const { disputeId, userId, allowAdmin = false } = params;
-  const userContext = await getUserDisputeContext(userId);
-  if (!userContext) {
-    throw new Error("User not found");
-  }
-
-  if (!(allowAdmin && userContext.role === UserRole.ADMIN)) {
-    await assertDisputeParticipant({ disputeId, userId });
-  }
-
-  return getDisputeAuditTrail(disputeId);
-}
-
+// Trigger the timeout auto-release sweep, which checks for any jobs that have been in a pending release state for
+// longer than the configured timeout period and automatically releases the funds to the worker if no active dispute
+// exists. This function is intended to be called by a scheduled job (e.g., cron) and will process all eligible jobs
+// in a single run.
 export async function triggerTimeoutAutoReleaseSweepAction() {
   const timeoutSeconds = getFundReleaseTimeoutSeconds();
   const cutoff = new Date(Date.now() - timeoutSeconds * 1000);

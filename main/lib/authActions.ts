@@ -8,7 +8,7 @@ import {
 } from "@/model/user";
 import { AuthError, User } from "next-auth";
 import { redirect } from "next/navigation";
-import { ExecutionResult } from "@/utils/types";
+import { ExecutionResult } from "@/type/general";
 import {
   OnboardingStage,
   UserRole,

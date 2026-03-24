@@ -1,4 +1,4 @@
-import { SmartAccountTransactionResult } from "@/utils/types";
+import { SmartAccountTransactionResult } from "@/type/general";
 import { getAdminSigner, getContract, getProvider } from "@/lib/ether";
 import { sendSmartAccountTransaction } from "@/lib/aaActions";
 import { ESCROW_ABI } from "./constants";
@@ -76,48 +76,4 @@ export async function executeJobTransaction(params: {
     txHash: txHashResult as `0x${string}`,
     userOpHash: userOpHashResult as `0x${string}`,
   };
-}
-
-/**
- * Executes admin-only escrow transactions via backend signer.
- */
-export async function executeAdminEscrowTransaction(params: {
-  functionName: string;
-  functionArgs: (string | number | bigint | boolean)[];
-}): Promise<SmartAccountTransactionResult> {
-  const fallbackErrorHash = "" as `0x${string}`;
-
-  try {
-    const signer = getAdminSigner();
-    const contract = await getContract(
-      ESCROW_CONTRACT_ADDRESS,
-      ESCROW_ABI,
-      signer,
-    );
-
-    const tx = await contract[params.functionName](...params.functionArgs);
-    const receipt = await tx.wait();
-    if (!receipt?.hash) {
-      throw new Error("No transaction hash returned from admin transaction");
-    }
-
-    return {
-      success: true,
-      txHash: receipt.hash as `0x${string}`,
-      userOpHash: receipt.hash as `0x${string}`,
-    };
-  } catch (error) {
-    console.error(
-      `Error executing admin transaction ${params.functionName}:`,
-      error,
-    );
-    return {
-      success: false,
-      errorMsg: `Error executing admin transaction ${params.functionName}: ${
-        (error as Error).message
-      }`,
-      txHash: fallbackErrorHash,
-      userOpHash: fallbackErrorHash,
-    };
-  }
 }

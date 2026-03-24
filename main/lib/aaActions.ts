@@ -4,10 +4,10 @@ import { LocalAccountSigner, polygonAmoy } from "@alchemy/aa-core";
 import { createModularAccountAlchemyClient } from "@alchemy/aa-alchemy";
 import { generatePrivateKey } from "viem/accounts";
 import { createUserWalletRecord } from "@/model/user";
-import { SmartAccountDetails, ExecutionResult } from "@/utils/types";
+import { SmartAccountDetails, ExecutionResult } from "@/type/general";
 import { decryptPrivateKey, encryptPrivateKey } from "./crypto";
 import { getWalletByUserId } from "@/model/wallet";
-import { SmartAccountTransactionResult } from "@/utils/types";
+import { SmartAccountTransactionResult } from "@/type/general";
 
 /**
  * Get the address of a user's wallet by their user ID

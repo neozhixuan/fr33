@@ -74,12 +74,17 @@ describe("JobEscrow", function () {
       escrow.connect(employer).approveRelease(jobId),
     ).to.be.revertedWith("Job not pending approval");
 
-    await escrow.connect(admin).resolveDispute(jobId, 0, 0); // RELEASE_TO_WORKER
+    const reason = "Worker provided complete delivery proof";
+    await escrow.connect(admin).resolveDispute(jobId, 0, 0, reason); // RELEASE_TO_WORKER
 
     const resolvedJob = await escrow.getJob(jobId);
     expect(resolvedJob.state).to.equal(3); // COMPLETED
     expect(resolvedJob.isFrozen).to.equal(false);
     expect(resolvedJob.amount).to.equal(0);
+
+    const resolution = await escrow.getDisputeResolution(jobId);
+    expect(resolution.exists).to.equal(true);
+    expect(resolution.reason).to.equal(reason);
   });
 
   it("auto-releases funds after timeout when employer is inactive", async function () {

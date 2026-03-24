@@ -2,7 +2,7 @@
 
 import Button from "@/ui/Button";
 import { UserInformation } from "../compliance-content";
-import { IssueVCResponse } from "@/utils/types";
+import { IssueVCResponse } from "@/type/general";
 import { processVcIssuance } from "@/lib/vcActions";
 import { getWalletAddress } from "@/lib/aaActions";
 import { convertBirthdateToAgeOver } from "@/utils/conv";

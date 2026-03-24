@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { VCData } from "@/utils/types";
+import { VCData } from "@/type/general";
 import { VCMetadata, VCStatus, Wallet } from "@/generated/prisma-client";
 
 export async function createVCMetadataForWallet(

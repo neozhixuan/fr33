@@ -1,18 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDisputeDetailsForUserAction } from "@/lib/disputeActions";
 import { auth } from "@/server/auth";
+import { getSessionUserId } from "@/utils/disputeUtils";
 
-function getSessionUserId(
-  session: { user?: { id?: string | null } } | null,
-): number {
-  const raw = session?.user?.id;
-  const parsed = Number(raw);
-  if (!raw || !Number.isInteger(parsed) || parsed <= 0) {
-    throw new Error("Unauthorized");
-  }
-  return parsed;
-}
-
+// API: Fetch dispute details for a specific dispute, ensuring the user is authorized to view it
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ disputeId: string }> },

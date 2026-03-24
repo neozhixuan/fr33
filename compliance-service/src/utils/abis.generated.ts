@@ -120,6 +120,12 @@ export const JobEscrow_ABI = [
         "internalType": "uint256",
         "name": "employerAmount",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "reason",
+        "type": "string"
       }
     ],
     "name": "DisputeResolved",
@@ -423,6 +429,55 @@ export const JobEscrow_ABI = [
         "type": "uint256"
       }
     ],
+    "name": "getDisputeResolution",
+    "outputs": [
+      {
+        "internalType": "enum JobEscrow.DisputeResolution",
+        "name": "resolution",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint16",
+        "name": "workerShareBps",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint256",
+        "name": "workerAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "employerAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "string",
+        "name": "reason",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "resolvedAt",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "exists",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "jobId",
+        "type": "uint256"
+      }
+    ],
     "name": "getJob",
     "outputs": [
       {
@@ -612,6 +667,11 @@ export const JobEscrow_ABI = [
         "internalType": "uint16",
         "name": "workerShareBps",
         "type": "uint16"
+      },
+      {
+        "internalType": "string",
+        "name": "reason",
+        "type": "string"
       }
     ],
     "name": "resolveDispute",
