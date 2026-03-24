@@ -37,13 +37,17 @@ model User {
   createdAt       DateTime        @default(now()) @db.Timestamptz(6)
   updatedAt       DateTime        @updatedAt @db.Timestamptz(6)
 
-  wallets   Wallet[] // One to many
-  auditLogs AuditLog[] // One to many
+  wallets          Wallet[] // One to many
+  auditLogs        AuditLog[] // One to many
+  openedDisputes   Dispute[]         @relation("DisputeOpenedBy")
+  decidedDisputes  Dispute[]         @relation("DisputeDecidedBy")
+  disputeEvidences DisputeEvidence[]
 
   @@map("users")
   @@schema("app_service")
 }
 
+// Wallets linked to users, with encrypted signer keys for on-chain interactions and KYC/VC metadata
 model Wallet {
   id      Int    @id @default(autoincrement())
   userId  Int // Many to one
@@ -102,6 +106,7 @@ enum VCStatus {
   @@schema("app_service")
 }
 
+// Job metadata to track current state and on-chain tx hashes for each state transition.
 model Job {
   id           Int     @id @default(autoincrement()) // Database ID
   employerId   Int
@@ -125,6 +130,7 @@ model Job {
   status           JobStatus         @default(POSTED)
   createdAt        DateTime          @default(now()) @db.Timestamptz(6)
   releaseEvidences ReleaseEvidence[]
+  disputes         Dispute[]
 
   @@map("jobs")
   @@schema("app_service")
@@ -141,6 +147,7 @@ enum JobStatus {
   @@schema("app_service")
 }
 
+// Audit logs for tracking user actions and system events, with flexible metadata storage for extensibility
 model AuditLog {
   id            Int         @id @default(autoincrement())
   userId        Int?
@@ -164,6 +171,7 @@ enum AuditResult {
   @@schema("app_service")
 }
 
+// Evidence submitted for a job, which can be used for release approval or dispute resolution. 
 model ReleaseEvidence {
   id    Int @id @default(autoincrement())
   jobId Int
@@ -187,5 +195,107 @@ enum EvidenceType {
   INVOICE
   OTHER
 
+  @@schema("app_service")
+}
+
+enum DisputeStatus {
+  OPEN
+  EVIDENCE_SUBMISSION
+  UNDER_REVIEW
+  DECIDED
+  ONCHAIN_PENDING
+  RESOLVED
+  CANCELLED
+
+  @@schema("app_service")
+}
+
+enum DisputeOutcome {
+  RELEASE_TO_WORKER
+  RETURN_TO_EMPLOYER
+  SPLIT
+
+  @@schema("app_service")
+}
+
+enum DisputeEvidenceType {
+  STATEMENT
+  DELIVERY_PROOF
+  COMMUNICATION_LOG
+  SCREENSHOT
+  INVOICE
+  OTHER
+
+  @@schema("app_service")
+}
+
+enum DisputeAuditAction {
+  DISPUTE_CREATED
+  ESCROW_FREEZE_REQUESTED
+  ESCROW_FREEZE_SUCCEEDED
+  ESCROW_FREEZE_FAILED
+  EVIDENCE_SUBMITTED
+  REVIEW_NOTE_ADDED
+  DECISION_RECORDED
+  ONCHAIN_RESOLUTION_SUBMITTED
+  ONCHAIN_RESOLUTION_CONFIRMED
+  ONCHAIN_RESOLUTION_FAILED
+  TIMEOUT_AUTO_RELEASE_TRIGGERED
+  TIMEOUT_AUTO_RELEASE_CONFIRMED
+  TIMEOUT_AUTO_RELEASE_FAILED
+
+  @@schema("app_service")
+}
+
+model Dispute {
+  id             Int           @id @default(autoincrement())
+  jobId          Int
+  openedByUserId Int
+  status         DisputeStatus @default(OPEN)
+
+  freezeTxHash     String?
+  resolutionTxHash String?
+
+  decision         DisputeOutcome?
+  workerShareBps   Int?
+  decisionReason   String?
+  adminReviewNote  String?
+  decidedByAdminId Int?
+
+  openedAt    DateTime  @default(now()) @db.Timestamptz(6)
+  decidedAt   DateTime? @db.Timestamptz(6)
+  resolvedAt  DateTime? @db.Timestamptz(6)
+  cancelledAt DateTime? @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(6)
+
+  job       Job               @relation(fields: [jobId], references: [id])
+  openedBy  User              @relation("DisputeOpenedBy", fields: [openedByUserId], references: [id])
+  decidedBy User?             @relation("DisputeDecidedBy", fields: [decidedByAdminId], references: [id])
+  evidences DisputeEvidence[]
+
+  @@index([jobId, status])
+  @@map("disputes")
+  @@schema("app_service")
+}
+
+model DisputeEvidence {
+  id                Int                 @id @default(autoincrement())
+  disputeId         Int
+  submittedByUserId Int
+  submittedByRole   UserRole
+  evidenceType      DisputeEvidenceType @default(STATEMENT)
+  contentText       String
+  attachmentUrl     String?
+  externalRef       String?
+  idempotencyKey    String?
+  createdAt         DateTime            @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime            @updatedAt @db.Timestamptz(6)
+
+  dispute     Dispute @relation(fields: [disputeId], references: [id])
+  submittedBy User    @relation(fields: [submittedByUserId], references: [id])
+
+  @@index([disputeId, createdAt])
+  @@map("dispute_evidence")
   @@schema("app_service")
 }

@@ -14,16 +14,35 @@ contract JobEscrow is Pausable, ReentrancyGuard {
         CANCELLED
     }
 
+    enum DisputeResolution {
+        RELEASE_TO_WORKER,
+        RETURN_TO_EMPLOYER,
+        SPLIT
+    }
+
     struct Job {
         address employer;
         address worker;
         uint256 amount;
         JobState state;
         uint256 createdAt;
+        uint256 releaseRequestedAt;
+        bool isFrozen;
+    }
+
+    struct ResolutionRecord {
+        DisputeResolution resolution;
+        uint16 workerShareBps;
+        uint256 workerAmount;
+        uint256 employerAmount;
+        string reason;
+        uint256 resolvedAt;
+        bool exists;
     }
 
     // Public variables (have an automatic getter function)
     mapping(uint256 => Job) public jobs; // Dictionary of ID to Job
+    mapping(uint256 => ResolutionRecord) private disputeResolutions;
     uint256 public jobCounter;
     address public admin;
 
@@ -44,6 +63,23 @@ contract JobEscrow is Pausable, ReentrancyGuard {
     event AdminUpdated(address indexed previousAdmin, address indexed newAdmin);
     event ContractPaused(address indexed admin);
     event ContractUnpaused(address indexed admin);
+    event EscrowFrozen(uint256 indexed jobId, address indexed triggeredBy);
+    event EscrowUnfrozen(uint256 indexed jobId, address indexed triggeredBy);
+    event DisputeOpened(uint256 indexed jobId, address indexed raisedBy);
+    event DisputeResolved(
+        uint256 indexed jobId,
+        DisputeResolution resolution,
+        uint16 workerShareBps,
+        uint256 workerAmount,
+        uint256 employerAmount,
+        string reason
+    );
+    event TimeoutAutoReleaseExecuted(
+        uint256 indexed jobId,
+        address indexed triggeredBy,
+        uint256 amount,
+        uint256 deadline
+    );
 
     // Modifiers
     modifier onlyEmployer(uint256 jobId) {
@@ -91,7 +127,9 @@ contract JobEscrow is Pausable, ReentrancyGuard {
             worker: address(0),
             amount: msg.value,
             state: JobState.FUNDED,
-            createdAt: block.timestamp
+            createdAt: block.timestamp,
+            releaseRequestedAt: 0,
+            isFrozen: false
         });
 
         jobCounter++;
@@ -125,8 +163,10 @@ contract JobEscrow is Pausable, ReentrancyGuard {
     ) external jobExists(jobId) onlyWorker(jobId) whenNotPaused {
         Job storage job = jobs[jobId];
         require(job.state == JobState.IN_PROGRESS, "Job not in progress");
+        require(!job.isFrozen, "Escrow frozen");
 
         job.state = JobState.PENDING_APPROVAL;
+        job.releaseRequestedAt = block.timestamp;
 
         emit ReleaseRequested(jobId);
     }
@@ -143,6 +183,7 @@ contract JobEscrow is Pausable, ReentrancyGuard {
             job.state == JobState.PENDING_APPROVAL,
             "Job not pending approval"
         );
+        require(!job.isFrozen, "Escrow frozen");
         require(job.worker != address(0), "Worker not set");
         require(job.amount > 0, "No funds to release");
 
@@ -170,6 +211,7 @@ contract JobEscrow is Pausable, ReentrancyGuard {
             job.state == JobState.FUNDED,
             "Job cannot be cancelled at this stage"
         );
+        require(!job.isFrozen, "Escrow frozen");
         require(job.amount > 0, "No funds to refund");
 
         job.state = JobState.CANCELLED;
@@ -200,11 +242,216 @@ contract JobEscrow is Pausable, ReentrancyGuard {
             address worker,
             uint256 amount,
             JobState state,
-            uint256 createdAt
+            uint256 createdAt,
+            uint256 releaseRequestedAt,
+            bool isFrozen
         )
     {
         Job memory job = jobs[jobId];
-        return (job.employer, job.worker, job.amount, job.state, job.createdAt);
+        return (
+            job.employer,
+            job.worker,
+            job.amount,
+            job.state,
+            job.createdAt,
+            job.releaseRequestedAt,
+            job.isFrozen
+        );
+    }
+
+    /*
+    @title Open a dispute for a job, which freezes the escrow and prevents further actions until resolved
+    @param jobId - The unique ID for the job
+    */
+    function openDispute(
+        uint256 jobId
+    ) external jobExists(jobId) whenNotPaused {
+        Job storage job = jobs[jobId];
+        require(
+            msg.sender == job.employer || msg.sender == job.worker,
+            "Only employer or worker"
+        );
+        require(
+            job.state == JobState.IN_PROGRESS ||
+                job.state == JobState.PENDING_APPROVAL,
+            "Dispute not allowed for this state"
+        );
+        require(!job.isFrozen, "Escrow already frozen");
+
+        job.isFrozen = true;
+        job.state = JobState.DISPUTED;
+
+        emit EscrowFrozen(jobId, msg.sender);
+        emit DisputeOpened(jobId, msg.sender);
+    }
+
+    /*
+    @title Admin freezes the escrow and prevents further actions until resolved
+    @param jobId - The unique ID for the job
+    */
+    function adminFreezeEscrow(
+        uint256 jobId
+    ) external onlyAdmin jobExists(jobId) whenNotPaused {
+        Job storage job = jobs[jobId];
+        require(
+            job.state == JobState.IN_PROGRESS ||
+                job.state == JobState.PENDING_APPROVAL,
+            "Freeze not allowed for this state"
+        );
+        require(!job.isFrozen, "Escrow already frozen");
+
+        job.isFrozen = true;
+        job.state = JobState.DISPUTED;
+
+        emit EscrowFrozen(jobId, msg.sender);
+    }
+
+    /*
+    @title Resolve a dispute for a job, which unfreezes the escrow and allows further actions based on the resolution
+    @param jobId - The unique ID for the job
+    */
+    function resolveDispute(
+        uint256 jobId,
+        DisputeResolution resolution,
+        uint16 workerShareBps,
+        string calldata reason
+    ) external onlyAdmin jobExists(jobId) whenNotPaused nonReentrant {
+        Job storage job = jobs[jobId];
+        require(job.state == JobState.DISPUTED, "Job not disputed");
+        require(job.isFrozen, "Escrow not frozen");
+        require(job.amount > 0, "No funds to resolve");
+        require(job.worker != address(0), "Worker not set");
+        require(bytes(reason).length > 0, "Reason required");
+
+        uint256 amount = job.amount;
+        uint256 workerAmount = 0;
+        uint256 employerAmount = 0;
+
+        if (resolution == DisputeResolution.RELEASE_TO_WORKER) {
+            workerAmount = amount;
+        } else if (resolution == DisputeResolution.RETURN_TO_EMPLOYER) {
+            employerAmount = amount;
+        } else {
+            require(workerShareBps <= 10_000, "Invalid split bps");
+            workerAmount = (amount * workerShareBps) / 10_000;
+            employerAmount = amount - workerAmount;
+        }
+
+        job.amount = 0;
+        job.isFrozen = false;
+        job.state = resolution == DisputeResolution.RETURN_TO_EMPLOYER
+            ? JobState.CANCELLED
+            : JobState.COMPLETED;
+
+        if (workerAmount > 0) {
+            (bool workerSuccess, ) = job.worker.call{value: workerAmount}("");
+            require(workerSuccess, "Transfer to worker failed");
+        }
+
+        if (employerAmount > 0) {
+            (bool employerSuccess, ) = job.employer.call{value: employerAmount}(
+                ""
+            );
+            require(employerSuccess, "Refund to employer failed");
+        }
+
+        disputeResolutions[jobId] = ResolutionRecord({
+            resolution: resolution,
+            workerShareBps: workerShareBps,
+            workerAmount: workerAmount,
+            employerAmount: employerAmount,
+            reason: reason,
+            resolvedAt: block.timestamp,
+            exists: true
+        });
+
+        emit DisputeResolved(
+            jobId,
+            resolution,
+            workerShareBps,
+            workerAmount,
+            employerAmount,
+            reason
+        );
+        emit EscrowUnfrozen(jobId, msg.sender);
+    }
+
+    function getDisputeResolution(
+        uint256 jobId
+    )
+        external
+        view
+        returns (
+            DisputeResolution resolution,
+            uint16 workerShareBps,
+            uint256 workerAmount,
+            uint256 employerAmount,
+            string memory reason,
+            uint256 resolvedAt,
+            bool exists
+        )
+    {
+        ResolutionRecord memory record = disputeResolutions[jobId];
+        return (
+            record.resolution,
+            record.workerShareBps,
+            record.workerAmount,
+            record.employerAmount,
+            record.reason,
+            record.resolvedAt,
+            record.exists
+        );
+    }
+
+    /*
+    @title Automatically release funds to worker if employer fails to respond within the timeout period after release
+    @param jobId - The unique ID for the job
+    @param timeoutSeconds - The number of seconds to wait after release request before allowing auto-release
+    */
+    function autoReleaseAfterTimeout(
+        uint256 jobId,
+        uint256 timeoutSeconds
+    ) external jobExists(jobId) whenNotPaused nonReentrant {
+        Job storage job = jobs[jobId];
+        require(
+            job.state == JobState.PENDING_APPROVAL,
+            "Job not pending approval"
+        );
+        require(!job.isFrozen, "Escrow frozen");
+        require(job.worker != address(0), "Worker not set");
+        require(job.amount > 0, "No funds to release");
+        require(job.releaseRequestedAt > 0, "Release not requested");
+
+        uint256 deadline = job.releaseRequestedAt + timeoutSeconds;
+        require(block.timestamp >= deadline, "Timeout not reached");
+
+        uint256 amount = job.amount;
+        address worker = job.worker;
+        job.amount = 0;
+        job.state = JobState.COMPLETED;
+
+        (bool success, ) = worker.call{value: amount}("");
+        require(success, "Transfer to worker failed");
+
+        emit FundsReleased(jobId, worker, amount);
+        emit TimeoutAutoReleaseExecuted(jobId, msg.sender, amount, deadline);
+    }
+
+    /*
+    @title Get the release deadline timestamp for a job based on the release request time and timeout period
+    @param jobId - The unique ID for the job
+    @param timeoutSeconds - The number of seconds to wait after release request before auto-release can be executed
+    @return deadline The timestamp when auto-release can be executed, or 0 if release has not been requested
+    */
+    function getReleaseDeadline(
+        uint256 jobId,
+        uint256 timeoutSeconds
+    ) external view jobExists(jobId) returns (uint256 deadline) {
+        Job memory job = jobs[jobId];
+        if (job.releaseRequestedAt == 0) {
+            return 0;
+        }
+        return job.releaseRequestedAt + timeoutSeconds;
     }
 
     /*

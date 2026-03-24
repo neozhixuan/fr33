@@ -1,5 +1,5 @@
 import { JobStatus } from "@/generated/prisma-client";
-import { JobForClientType } from "@/utils/types";
+import { JobForClientType } from "@/type/general";
 import { POL_TO_SGD_RATE } from "@/utils/constants";
 
 export default function MainJobSection({ job }: { job: JobForClientType }) {

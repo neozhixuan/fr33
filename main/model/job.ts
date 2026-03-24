@@ -1,6 +1,6 @@
 import { Job, JobStatus } from "@/generated/prisma-client";
 import { prisma } from "@/lib/db";
-import { JobListingsResult } from "@/utils/types";
+import { JobListingsResult } from "@/type/general";
 
 export async function createJobListing(
   title: string,

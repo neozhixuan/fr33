@@ -7,7 +7,7 @@ import {
   fundEscrowAction,
   refundPaymentAction,
 } from "@/lib/jobActions";
-import { JobForClientType } from "@/utils/types";
+import { JobForClientType } from "@/type/general";
 import Button from "@/ui/Button";
 import ActionForm from "./ActionForm";
 import ActionStatusCard from "./ActionStatusCard";

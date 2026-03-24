@@ -1,6 +1,6 @@
 "use server";
 
-import { IssueVCResponse } from "@/utils/types";
+import { IssueVCResponse } from "@/type/general";
 import { getWalletByUserId } from "@/model/wallet";
 import { createVCMetadataForWallet, getValidVCForWallet } from "@/model/vc";
 import { updateUserOnboardingStage } from "@/model/user";

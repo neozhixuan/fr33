@@ -15,7 +15,7 @@ import {
 import {
   JobListingsResult,
   SmartAccountTransactionResult,
-} from "@/utils/types";
+} from "@/type/general";
 import { parseSGDToPolygon } from "./ether";
 import { getWalletAddress } from "./aaActions";
 

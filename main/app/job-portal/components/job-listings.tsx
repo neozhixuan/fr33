@@ -1,7 +1,7 @@
 "use client";
 
 import { JobStatus } from "@/generated/prisma-client";
-import { JobListingsResult } from "@/utils/types";
+import { JobListingsResult } from "@/type/general";
 import { POL_TO_SGD_RATE } from "@/utils/constants";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";

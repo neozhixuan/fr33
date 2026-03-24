@@ -1,5 +1,5 @@
-import { SmartAccountTransactionResult } from "@/utils/types";
-import { getContract, getProvider } from "@/lib/ether";
+import { SmartAccountTransactionResult } from "@/type/general";
+import { getAdminSigner, getContract, getProvider } from "@/lib/ether";
 import { sendSmartAccountTransaction } from "@/lib/aaActions";
 import { ESCROW_ABI } from "./constants";
 
