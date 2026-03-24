@@ -94,7 +94,7 @@ export async function updateJobAfterAcceptJob(
     await prisma.job.update({
       where: { id: jobId },
       data: {
-        status: JobStatus.IN_PROGRESS,
+        status: JobStatus.PENDING_APPROVAL, // TODO: Change to IN_PROGRESS after implementing evidence submission
         workerWallet,
         acceptTxHash: txHash,
         acceptedAt: new Date(),

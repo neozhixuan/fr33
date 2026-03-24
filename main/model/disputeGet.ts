@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { JobStatus } from "@/generated/prisma-client";
 import {
   DbDispute,
+  DbDisputeEvidence,
   DisputeWithRelations,
   UserDisputeContext,
 } from "@/type/disputeTypes";
@@ -39,79 +40,144 @@ export async function getUserDisputeContext(
 async function getActiveDisputeForJob(
   jobId: number,
 ): Promise<DbDispute | null> {
-  const rows = await prisma.$queryRaw<DbDispute[]>`
-    SELECT *
-    FROM "app_service"."disputes"
-    WHERE "jobId" = ${jobId}
-      AND "status" IN ('OPEN', 'EVIDENCE_SUBMISSION', 'UNDER_REVIEW', 'DECIDED', 'ONCHAIN_PENDING')
-    ORDER BY "id" DESC
-    LIMIT 1
-  `;
+  const dispute = await prisma.dispute.findFirst({
+    where: {
+      jobId,
+      status: {
+        in: [...ACTIVE_DISPUTE_STATUSES],
+      },
+    },
+    orderBy: {
+      id: "desc",
+    },
+  });
 
-  return rows[0] ?? null;
+  return (dispute as DbDispute | null) ?? null;
 }
 
 // List all disputes where the user is involved either as an employer or worker.
 export async function listDisputesForUser(userId: number) {
-  return prisma.$queryRaw<DbDispute[]>`
-    SELECT d.*
-    FROM "app_service"."disputes" d
-    JOIN "app_service"."jobs" j ON j."id" = d."jobId"
-    LEFT JOIN "app_service"."wallets" w
-      ON w."userId" = ${userId}
-      AND w."status" = 'ACTIVE'::"app_service"."WalletStatus"
-    WHERE j."employerId" = ${userId}
-      OR j."workerWallet" = w."address"
-    ORDER BY d."createdAt" DESC
-  `;
+  const activeWallet = await prisma.wallet.findFirst({
+    where: {
+      userId,
+      status: "ACTIVE",
+    },
+    select: {
+      address: true,
+    },
+    orderBy: {
+      id: "desc",
+    },
+  });
+
+  const disputes = await prisma.dispute.findMany({
+    where: {
+      OR: [
+        {
+          job: {
+            employerId: userId,
+          },
+        },
+        ...(activeWallet?.address
+          ? [
+              {
+                job: {
+                  workerWallet: activeWallet.address,
+                },
+              },
+            ]
+          : []),
+      ],
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  return disputes as DbDispute[];
 }
 
 // List all disputes that are currently open or in progress, ordered by oldest first.
 export async function listOpenDisputes() {
-  return prisma.$queryRaw<DbDispute[]>`
-    SELECT *
-    FROM "app_service"."disputes"
-    WHERE "status" IN ('OPEN', 'EVIDENCE_SUBMISSION', 'UNDER_REVIEW', 'DECIDED', 'ONCHAIN_PENDING')
-    ORDER BY "createdAt" ASC
-  `;
+  const disputes = await prisma.dispute.findMany({
+    where: {
+      status: {
+        in: [...ACTIVE_DISPUTE_STATUSES],
+      },
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+  });
+
+  return disputes as DbDispute[];
 }
 
 // Get detailed information about a dispute, including related job and user info, and all evidence submitted.
 export async function getDisputeDetails(
   disputeId: number,
 ): Promise<DisputeWithRelations | null> {
-  const disputes = await prisma.$queryRaw<DisputeWithRelations[]>`
-    SELECT d.*,
-      row_to_json(j.*) as job,
-      row_to_json(ob.*) as "openedBy",
-      row_to_json(db.*) as "decidedBy",
-      (
-        SELECT COALESCE(json_agg(e ORDER BY e."createdAt" ASC), '[]'::json)
-        FROM "app_service"."dispute_evidence" e
-        WHERE e."disputeId" = d."id"
-      ) as evidences
-    FROM "app_service"."disputes" d
-    JOIN "app_service"."jobs" j ON j."id" = d."jobId"
-    JOIN "app_service"."users" ob ON ob."id" = d."openedByUserId"
-    LEFT JOIN "app_service"."users" db ON db."id" = d."decidedByAdminId"
-    WHERE d."id" = ${disputeId}
-    LIMIT 1
-  `;
+  const dispute = await prisma.dispute.findUnique({
+    where: {
+      id: disputeId,
+    },
+    include: {
+      job: {
+        select: {
+          id: true,
+          employerId: true,
+          workerWallet: true,
+          title: true,
+          status: true,
+          applyReleaseAt: true,
+        },
+      },
+      openedBy: {
+        select: {
+          id: true,
+          email: true,
+          role: true,
+        },
+      },
+      decidedBy: {
+        select: {
+          id: true,
+          email: true,
+          role: true,
+        },
+      },
+      evidences: {
+        orderBy: {
+          createdAt: "asc",
+        },
+      },
+    },
+  });
 
-  return disputes[0] ?? null;
+  if (!dispute) {
+    return null;
+  }
+
+  return {
+    ...(dispute as DbDispute),
+    job: dispute.job,
+    openedBy: dispute.openedBy,
+    decidedBy: dispute.decidedBy,
+    evidences: dispute.evidences as DbDisputeEvidence[],
+  };
 }
 
 // Fetch basic dispute information by ID without related data, used for quick checks like existence or status.
 export async function getDisputeByIdBasic(
   disputeId: number,
 ): Promise<DbDispute | null> {
-  const rows = await prisma.$queryRaw<DbDispute[]>`
-    SELECT *
-    FROM "app_service"."disputes"
-    WHERE "id" = ${disputeId}
-    LIMIT 1
-  `;
-  return rows[0] ?? null;
+  const dispute = await prisma.dispute.findUnique({
+    where: {
+      id: disputeId,
+    },
+  });
+
+  return (dispute as DbDispute | null) ?? null;
 }
 
 // Get jobs that have been in a pending release state for longer than the specified cutoff time,

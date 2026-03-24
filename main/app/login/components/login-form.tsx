@@ -4,7 +4,6 @@ import { useActionState } from "react";
 import { authenticateAction } from "@/lib/authActions";
 import { useSearchParams } from "next/navigation";
 import { getLoginErrorMsg } from "@/utils/errors";
-import NextLink from "next/link";
 
 export function LoginForm() {
   const redirectURL = "/job-portal";

@@ -16,14 +16,25 @@ export async function createUserAfterPasswordHash(
   role: UserRole,
 ) {
   const hashedPassword = await bcrypt.hash(password, 10);
+
   try {
-    await prisma.user.create({
-      data: {
-        email: email,
-        passwordHash: hashedPassword,
-        role: role,
-        onboardingStage: OnboardingStage.WALLET_PENDING,
-      },
+    await prisma.$transaction(async (tx) => {
+      const existingUser = await tx.user.findFirst({
+        where: { email },
+      });
+
+      if (existingUser) {
+        throw new Error("User with this email already exists.");
+      }
+
+      await tx.user.create({
+        data: {
+          email: email,
+          passwordHash: hashedPassword,
+          role: role,
+          onboardingStage: OnboardingStage.WALLET_PENDING,
+        },
+      });
     });
   } catch (error) {
     console.error("Failed to create user, err:", error);

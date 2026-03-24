@@ -1,5 +1,5 @@
 "use server";
-
+// NOTE: Actions should not throw errors; return error messages instead.
 import { signIn, signOut } from "@/server/auth";
 import {
   createUserAfterPasswordHash,
@@ -8,6 +8,7 @@ import {
 } from "@/model/user";
 import { AuthError, User } from "next-auth";
 import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { ExecutionResult } from "@/type/general";
 import {
   OnboardingStage,
@@ -46,6 +47,10 @@ export async function authenticateAction(
   try {
     await signIn("credentials", formData);
   } catch (error) {
+    if (isRedirectError(error)) {
+      return "Redirect error: " + error.message;
+    }
+
     // Return err message
     if (error instanceof AuthError) {
       if (error.type === "CredentialsSignin") {
@@ -58,7 +63,10 @@ export async function authenticateAction(
       );
     }
     // Non-auth error
-    throw error;
+    return (
+      "Unknown error: " + (error as Error).message ||
+      "Unknown error, please try again"
+    );
   }
 }
 
@@ -84,12 +92,16 @@ export async function registrationAction(
     await createUserAfterPasswordHash(email, password, role as UserRole);
     redirect("/login?error=new-user&from=job-portal");
   } catch (error) {
+    if (isRedirectError(error)) {
+      return "Redirect error: " + error.message;
+    }
+
     // Return err message
     if (error instanceof AuthError) {
       return "Something went wrong, err: " + (error.message || "Unknown error");
     }
     // Non-auth error
-    throw error;
+    return (error as Error).message || "Unknown error, please try again";
   }
 }
 
