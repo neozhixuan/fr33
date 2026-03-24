@@ -12,7 +12,7 @@ import Button from "@/ui/Button";
 import ActionForm from "./ActionForm";
 import ActionStatusCard from "./ActionStatusCard";
 import { useActionState, useState } from "react";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { checkIsUserActionAllowed } from "@/lib/vcActions";
 
 
@@ -33,6 +33,8 @@ type ReleaseStateType = {
 };
 
 export default function EmployerActions({ job, employerId, wallet }: FundJobFormProps) {
+  const router = useRouter();
+
   const [fundedState, setFundedState] = useState<FundedStateType>({
     fundedAt: job.fundedAt ? new Date(job.fundedAt).toLocaleString() : "N/A",
     fundedTxHash: job.fundedTxHash || "",
@@ -63,6 +65,7 @@ export default function EmployerActions({ job, employerId, wallet }: FundJobForm
           fundedTxHash: txHash ?? "Error",
           fundedAt: new Date().toLocaleString(),
         });
+        router.refresh();
       }
 
       return { success, errorMsg };
@@ -88,6 +91,7 @@ export default function EmployerActions({ job, employerId, wallet }: FundJobForm
             releaseTxHash: txHash ?? "N/A",
             releasedAt: new Date().toLocaleString(),
           });
+          router.refresh();
         }
 
         return { success, errorMsg };
@@ -108,7 +112,8 @@ export default function EmployerActions({ job, employerId, wallet }: FundJobForm
         employerId,
       }); // Cannot pass callback from server to client component
       if (success) {
-        redirect("/job-portal?message=job-deleted");
+        router.push("/job-portal?message=job-deleted");
+        router.refresh();
       }
 
       return { success, errorMsg };
@@ -134,6 +139,7 @@ export default function EmployerActions({ job, employerId, wallet }: FundJobForm
           fundedAt: "N/A",
           fundedTxHash: "",
         });
+        router.refresh();
       }
 
       return { success, errorMsg };

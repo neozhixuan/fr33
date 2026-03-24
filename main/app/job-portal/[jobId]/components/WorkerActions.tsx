@@ -6,6 +6,7 @@ import ActionForm from "./ActionForm";
 import ActionStatusCard from "./ActionStatusCard";
 import { useActionState, useState } from "react";
 import { checkIsUserActionAllowed } from "@/lib/vcActions";
+import { useRouter } from "next/navigation";
 
 interface ApplyJobFormProps {
   job: Omit<Job, "amount"> & { amount: number };
@@ -18,6 +19,8 @@ export default function WorkerActions({
   workerId,
   workerWallet,
 }: ApplyJobFormProps) {
+  const router = useRouter();
+
   const [acceptState, setAcceptState] = useState<{
     acceptTxHash: string;
     acceptedAt: string | undefined;
@@ -55,6 +58,7 @@ export default function WorkerActions({
           acceptTxHash: txHash ?? "Error",
           acceptedAt: new Date().toLocaleDateString(),
         });
+        router.refresh();
       }
 
       return { success, errorMsg };
@@ -79,6 +83,7 @@ export default function WorkerActions({
           applyReleaseTxHash: txHash ?? "Error",
           appliedAt: new Date().toLocaleDateString(),
         });
+        router.refresh();
       }
 
       return { success, errorMsg };
