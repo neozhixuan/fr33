@@ -16,13 +16,63 @@ import {
   JobListingsResult,
   SmartAccountTransactionResult,
 } from "@/type/general";
-import { parseSGDToPolygon } from "./ether";
+import { getProvider, parseSGDToPolygon } from "./ether";
 import { getWalletAddress } from "./aaActions";
 
 import { executeJobTransaction } from "@/utils/aaUtils";
 import { validateJobDetails } from "@/utils/jobUtils";
+import { ethers } from "ethers";
 
 import { redirect } from "next/navigation";
+
+const ONCHAIN_JOB_STATE_LABELS = [
+  "FUNDED",
+  "IN_PROGRESS",
+  "PENDING_APPROVAL",
+  "COMPLETED",
+  "DISPUTED",
+  "CANCELLED",
+] as const;
+
+async function getOnchainJobSnapshot(jobId: number): Promise<{
+  worker: string;
+  stateLabel: (typeof ONCHAIN_JOB_STATE_LABELS)[number] | `UNKNOWN_${number}`;
+}> {
+  const escrowAddress = process.env.NEXT_ESCROW_CONTRACT_ADDRESS!;
+  const provider = getProvider();
+
+  const ifaceV2 = new ethers.Interface([
+    "function getJob(uint256) view returns (address employer, address worker, uint256 amount, uint8 state, uint256 createdAt, uint256 releaseRequestedAt, bool isFrozen)",
+  ]);
+  const ifaceV1 = new ethers.Interface([
+    "function getJob(uint256) view returns (address employer, address worker, uint256 amount, uint8 state, uint256 createdAt)",
+  ]);
+
+  const calldata = ifaceV2.encodeFunctionData("getJob", [jobId]);
+  const raw = await provider.call({
+    to: escrowAddress,
+    data: calldata,
+  });
+
+  let worker = "";
+  let stateNumber = -1;
+
+  try {
+    const decodedV2 = ifaceV2.decodeFunctionResult("getJob", raw);
+    worker = String(decodedV2[1] ?? "");
+    stateNumber = Number(decodedV2[3]);
+  } catch {
+    const decodedV1 = ifaceV1.decodeFunctionResult("getJob", raw);
+    worker = String(decodedV1[1] ?? "");
+    stateNumber = Number(decodedV1[3]);
+  }
+
+  const stateLabel =
+    ONCHAIN_JOB_STATE_LABELS[stateNumber] ??
+    (`UNKNOWN_${stateNumber}` as const);
+
+  return { worker, stateLabel };
+}
 
 /**
  * Create a job as an employer
@@ -164,6 +214,45 @@ export async function applyFundReleaseAction(params: {
     return {
       success: false,
       errorMsg,
+      txHash: "" as `0x${string}`,
+      userOpHash: "" as `0x${string}`,
+    };
+  }
+
+  // Preflight on-chain checks for clearer error visibility before sponsored userOp.
+  try {
+    const [workerWalletAddress, onchain] = await Promise.all([
+      getWalletAddress(workerId),
+      getOnchainJobSnapshot(jobId),
+    ]);
+
+    if (onchain.stateLabel !== "IN_PROGRESS") {
+      return {
+        success: false,
+        errorMsg: `Cannot request release: on-chain job state is ${onchain.stateLabel}, expected IN_PROGRESS. Please refresh and retry.`,
+        txHash: "" as `0x${string}`,
+        userOpHash: "" as `0x${string}`,
+      };
+    }
+
+    if (
+      onchain.worker &&
+      onchain.worker !== "0x0000000000000000000000000000000000000000" &&
+      onchain.worker.toLowerCase() !== workerWalletAddress.toLowerCase()
+    ) {
+      return {
+        success: false,
+        errorMsg: `Cannot request release: on-chain worker (${onchain.worker}) does not match your wallet (${workerWalletAddress}).`,
+        txHash: "" as `0x${string}`,
+        userOpHash: "" as `0x${string}`,
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      errorMsg:
+        "Unable to validate on-chain job status before request release: " +
+        (error as Error).message,
       txHash: "" as `0x${string}`,
       userOpHash: "" as `0x${string}`,
     };
