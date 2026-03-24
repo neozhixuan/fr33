@@ -310,6 +310,26 @@ npm run stack:up
 cd ../..
 ```
 
+### Optional: seed an admin user (main service)
+
+In `main/.env`, set:
+
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD`
+
+Then run:
+
+```sh
+cd main
+npm run prisma:seed
+cd ..
+```
+
+Notes:
+
+- Login currently validates an email format. If `ADMIN_USERNAME` is not an email, seed maps it to `<username>@gmail.com`.
+- Dispute resolution still requires backend access to `NEXT_ADMIN_PRIVATE_KEY` for on-chain admin transactions.
+
 ### 6) Start services
 
 Use 2 terminals from repo root:
