@@ -47,8 +47,9 @@ export async function authenticateAction(
   try {
     await signIn("credentials", formData);
   } catch (error) {
+    // Necessary for NextJS redirect flows
     if (isRedirectError(error)) {
-      return "Redirect error: " + error.message;
+      throw error;
     }
 
     // Return err message
@@ -92,8 +93,9 @@ export async function registrationAction(
     await createUserAfterPasswordHash(email, password, role as UserRole);
     redirect("/login?error=new-user&from=job-portal");
   } catch (error) {
+    // Necessary for NextJS redirect flows
     if (isRedirectError(error)) {
-      return "Redirect error: " + error.message;
+      throw error;
     }
 
     // Return err message
