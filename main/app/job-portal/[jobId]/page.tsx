@@ -141,6 +141,7 @@ export default async function JobPage({ params }: JobPageProps) {
               jobId={job.id}
               jobStatus={job.status}
               canOpenDispute={isEmployer || isAssignedWorker}
+              isAdmin={user.role === UserRole.ADMIN}
             />
           </aside>
         </div>

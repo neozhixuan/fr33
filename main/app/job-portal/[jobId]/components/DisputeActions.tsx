@@ -15,6 +15,7 @@ type DisputeActionsProps = {
     jobId: number;
     jobStatus: JobStatus;
     canOpenDispute: boolean;
+    isAdmin?: boolean;
 };
 
 const OPENABLE_JOB_STATUSES: JobStatus[] = [
@@ -34,6 +35,7 @@ export default function DisputeActions({
     jobId,
     jobStatus,
     canOpenDispute,
+    isAdmin = false,
 }: DisputeActionsProps) {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
@@ -55,7 +57,8 @@ export default function DisputeActions({
             setLoading(true);
             setError("");
             try {
-                const res = await fetch("/api/disputes?scope=my", {
+                const scope = isAdmin ? "admin" : "my";
+                const res = await fetch(`/api/disputes?scope=${scope}`, {
                     method: "GET",
                     cache: "no-store",
                 });
@@ -79,7 +82,7 @@ export default function DisputeActions({
         };
 
         void run();
-    }, [jobId]);
+    }, [jobId, isAdmin]);
 
     const createDispute = async () => {
         setSubmitting(true);
@@ -161,11 +164,17 @@ export default function DisputeActions({
                 </div>
             ) : (
                 <p className="text-xs text-[#b9cacb]">
-                    Dispute can only be opened by the assigned worker or employer when job is in progress or pending approval. If you are an assigned worker or employer, this means that no disputes were found.
+                    {isAdmin
+                        ? "No open disputes found for this job."
+                        : "Dispute can only be opened by the assigned worker or employer when job is in progress or pending approval. If you are an assigned worker or employer, this means that no disputes were found."}
                 </p>
             )}
 
-            {error && <p className="mt-3 text-xs text-red-300">{error}</p>}
+            {error && (
+                <div className="mt-3 max-h-36 overflow-y-auto rounded border border-red-400/30 bg-red-500/10 p-3">
+                    <p className="break-words text-xs text-red-300">{error}</p>
+                </div>
+            )}
             <Link
                 href={`/dispute${jobId ? `?jobId=${jobId}` : ""}`}
                 className="mt-4 inline-flex text-xs uppercase tracking-[0.2em] text-[#00f2ff] hover:underline"

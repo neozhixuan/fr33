@@ -52,7 +52,7 @@ export function parseSGDToPolygon(amountInSGD: string): bigint {
 }
 
 // Retrieve a user's wallet balance in POL and format it for display
-export async function getUserWalletPolygonValue(
+export async function getUserWalletValueString(
   wallet: Wallet,
 ): Promise<string> {
   const provider = getProvider();
@@ -61,5 +61,8 @@ export async function getUserWalletPolygonValue(
   return `${formatted.toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 6,
-  })} POL`;
+  })} POL / $${(formatted / POL_TO_SGD_RATE).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })} SGD`;
 }

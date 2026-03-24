@@ -6,7 +6,7 @@ import { UserRole } from "@/generated/prisma-client";
 import { getJobListingsAction } from "@/lib/jobActions";
 import { JobListings } from "./components";
 import NextLink from "next/link";
-import { getUserWalletPolygonValue } from "@/lib/ether";
+import { getUserWalletValueString } from "@/lib/ether";
 
 /**
  * Job Portal Page.
@@ -41,12 +41,12 @@ export default async function JobPortal({
     ? `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}`
     : "No wallet";
 
-  let walletPolBalanceLabel = "not possible at the moment";
+  let walletPolBalanceLabel = user.role === UserRole.ADMIN ? "Admin has no wallet." : "Retrieving balance...";
   if (wallet?.address) {
     try {
-      walletPolBalanceLabel = await getUserWalletPolygonValue(wallet);
+      walletPolBalanceLabel = await getUserWalletValueString(wallet);
     } catch {
-      walletPolBalanceLabel = "not possible at the moment";
+      walletPolBalanceLabel = "Error retrieving balance.";
     }
   }
 
