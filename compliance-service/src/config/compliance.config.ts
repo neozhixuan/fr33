@@ -1,30 +1,6 @@
-type ComplianceConfig = {
-  monitorEnabled: boolean;
-  monitorVerbose: boolean;
-  subgraphUrl: string;
-  pollIntervalMs: number;
-  fetchBatchSize: number;
-  caseThreshold: number;
-  largeEscrow: {
-    minBaselineTxCount: number;
-    lookbackHours: number;
-    multiplier: number;
-    absoluteMinWei: bigint;
-    scoreDelta: number;
-  };
-  disputeFrequency: {
-    lookbackHours: number;
-    minJobs: number;
-    disputeRatioThreshold: number;
-    scoreDelta: number;
-  };
-  burstActivity: {
-    windowMinutes: number;
-    minEventCount: number;
-    scoreDelta: number;
-  };
-};
+import { ComplianceConfig } from "../type/compliance.types";
 
+// Get env variable that has dtype of number
 function getEnvNumber(name: string, fallback: number): number {
   const raw = process.env[name];
   if (!raw) return fallback;
@@ -33,6 +9,7 @@ function getEnvNumber(name: string, fallback: number): number {
   return parsed;
 }
 
+// Get env variable that has dtype of bigint
 function getEnvBigInt(name: string, fallback: bigint): bigint {
   const raw = process.env[name];
   if (!raw) return fallback;
@@ -44,12 +21,14 @@ function getEnvBigInt(name: string, fallback: bigint): bigint {
   }
 }
 
+// Get env variable that has dtype of boolean
 function getEnvBool(name: string, fallback: boolean): boolean {
   const raw = process.env[name];
   if (!raw) return fallback;
   return ["true", "1", "yes", "y"].includes(raw.toLowerCase());
 }
 
+// Get configurations for compliance in runtime
 export function getComplianceConfig(): ComplianceConfig {
   return {
     monitorEnabled: getEnvBool("COMPLIANCE_MONITOR_ENABLED", true),

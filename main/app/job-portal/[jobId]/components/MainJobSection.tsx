@@ -1,6 +1,6 @@
 import { JobStatus } from "@/generated/prisma-client";
 import { JobForClientType } from "@/type/general";
-import { POL_TO_SGD_RATE } from "@/utils/constants";
+import { POL_TO_SGD_RATE, formatDateConsistent } from "@/utils/constants";
 
 export default function MainJobSection({ job }: { job: JobForClientType }) {
   const statusLabel =
@@ -28,7 +28,7 @@ export default function MainJobSection({ job }: { job: JobForClientType }) {
         <div className="rounded-lg border border-white/10 bg-[#131314] p-4">
           <p className="text-[10px] uppercase tracking-[0.2em] text-[#b9cacb]">Created</p>
           <p className="mt-1 text-sm font-semibold text-[#e5e2e3]">
-            {new Date(job.createdAt).toLocaleString()}
+            {formatDateConsistent(job.createdAt)}
           </p>
         </div>
         <div className="rounded-lg border border-white/10 bg-[#131314] p-4">

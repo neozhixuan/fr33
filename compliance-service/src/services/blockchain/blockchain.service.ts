@@ -4,7 +4,7 @@ import {
   getVcRegistryReadContract,
   getVcRegistryWriteContract,
 } from "../../lib/ether";
-import { VCRegistrationAuthorisation } from "../../utils/types";
+import { VCRegistrationAuthorisation } from "../../type/vc.types";
 
 const ISSUER_AUTHORISATION_VALIDITY_SECONDS = 15 * 60; // 15 minutes
 

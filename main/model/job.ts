@@ -1,6 +1,12 @@
-import { Job, JobStatus } from "@/generated/prisma-client";
+import { EvidenceType, Job, JobStatus } from "@/generated/prisma-client";
 import { prisma } from "@/lib/db";
 import { JobListingsResult } from "@/type/general";
+
+type ReleaseEvidenceInput = {
+  uploadedBy: number;
+  notes: string;
+  fileUrl?: string | null;
+};
 
 export async function createJobListing(
   title: string,
@@ -111,15 +117,33 @@ export async function updateJobAfterAcceptJob(
 export async function updateJobAfterApplyFundRelease(
   jobId: number,
   txHash: string,
+  releaseEvidence?: ReleaseEvidenceInput,
 ) {
   try {
-    await prisma.job.update({
-      where: { id: jobId },
-      data: {
-        applyReleaseTxHash: txHash,
-        applyReleaseAt: new Date(),
-        status: JobStatus.PENDING_APPROVAL,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.job.update({
+        where: { id: jobId },
+        data: {
+          applyReleaseTxHash: txHash,
+          applyReleaseAt: new Date(),
+          status: JobStatus.PENDING_APPROVAL,
+        },
+      });
+
+      if (releaseEvidence?.notes?.trim()) {
+        await tx.releaseEvidence.create({
+          data: {
+            jobId,
+            uploadedBy: releaseEvidence.uploadedBy,
+            uploadedAt: new Date(),
+            notes: releaseEvidence.notes.trim(),
+            fileUrl: releaseEvidence.fileUrl ?? "",
+            type: releaseEvidence.fileUrl
+              ? EvidenceType.DELIVERY_PROOF
+              : EvidenceType.OTHER,
+          },
+        });
+      }
     });
   } catch (error) {
     console.error("Error updating job after applying for fund release:", error);
@@ -177,6 +201,29 @@ export async function updateJobAfterRefundPayment(jobId: number) {
     console.error("Error updating job after refunding payment:", error);
     throw new Error(
       "Error updating job after refunding payment: " + (error as Error).message,
+    );
+  }
+}
+
+export async function getReleaseEvidencesByJobId(jobId: number) {
+  try {
+    return await prisma.releaseEvidence.findMany({
+      where: { jobId },
+      orderBy: { uploadedAt: "desc" },
+      select: {
+        id: true,
+        jobId: true,
+        type: true,
+        fileUrl: true,
+        notes: true,
+        uploadedAt: true,
+        uploadedBy: true,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching release evidences:", error);
+    throw new Error(
+      "Error fetching release evidences: " + (error as Error).message,
     );
   }
 }

@@ -1,9 +1,10 @@
+import { getProfileByWallet } from "../../model/compliance.repository";
 import {
-  actionComplianceCase,
   dismissComplianceCase,
-  getProfileByWallet,
+  actionComplianceCase,
   listComplianceCases,
-} from "./compliance.repository";
+} from "../../model/compliance-case.repository";
+
 import { revokeVcRegistryTx } from "../blockchain/blockchain.service";
 
 // Service functions for managing compliance cases, including listing cases, dismissing cases, taking action on cases by revoking VCs, and fetching wallet profiles.

@@ -7,19 +7,21 @@ import {
   fundEscrowAction,
   refundPaymentAction,
 } from "@/lib/jobActions";
-import { JobForClientType } from "@/type/general";
+import { JobForClientType, ReleaseEvidenceItem } from "@/type/general";
 import Button from "@/ui/Button";
 import ActionForm from "./ActionForm";
 import ActionStatusCard from "./ActionStatusCard";
 import { useActionState, useState } from "react";
 import { useRouter } from "next/navigation";
 import { checkIsUserActionAllowed } from "@/lib/vcActions";
+import ReleaseEvidenceReview from "./ReleaseEvidenceReview";
 
 
 interface FundJobFormProps {
   job: JobForClientType;
   employerId: number;
   wallet: Wallet;
+  releaseEvidences: ReleaseEvidenceItem[];
 }
 
 type FundedStateType = {
@@ -32,7 +34,12 @@ type ReleaseStateType = {
   releaseTxHash: string;
 };
 
-export default function EmployerActions({ job, employerId, wallet }: FundJobFormProps) {
+export default function EmployerActions({
+  job,
+  employerId,
+  wallet,
+  releaseEvidences,
+}: FundJobFormProps) {
   const router = useRouter();
 
   const [fundedState, setFundedState] = useState<FundedStateType>({
@@ -182,6 +189,18 @@ export default function EmployerActions({ job, employerId, wallet }: FundJobForm
           </form>
         </>
       )}
+      {job.status === JobStatus.PENDING_APPROVAL &&
+        releaseEvidences.length > 0 && (
+          <ReleaseEvidenceReview releaseEvidences={releaseEvidences} />
+        )}
+
+      {job.status === JobStatus.PENDING_APPROVAL &&
+        releaseEvidences.length === 0 && (
+          <p className="text-xs text-[#f7b267]">
+            Worker evidence has not been submitted yet. Approval is blocked until evidence is available.
+          </p>
+        )}
+
       {job.status === JobStatus.PENDING_APPROVAL &&
         (acceptFundReleaseState.releasedAt === "N/A" ? (
           // Approve fund release

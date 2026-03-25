@@ -1,28 +1,26 @@
 import { fetchEscrowEventsAfter } from "./subgraph.client";
+import { getComplianceConfig } from "../../config/compliance.config";
+
+// Models
 import {
-  attachTriggersToCase,
-  createComplianceCase,
-  createRuleTriggerIfMissing,
-  getOpenCase,
   getOrCreateCursor,
-  getOrCreateProfile,
-  incrementProfileScore,
-  ingestEscrowEvent,
   updateCursor,
-} from "./compliance.repository";
-import { evaluateRulesForWalletEvent } from "./rule-engine.service";
-import { getComplianceConfig } from "./compliance.config";
+} from "../../model/compliance.repository";
+import { ingestEscrowEvent } from "../../model/escrow-activity.repository";
+import { processWalletRules } from "./rule-processor.service";
 
 let timer: NodeJS.Timeout | null = null;
 let polling = false;
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
-function logVerbose(message: string): void {
+// Log verbosely if monitorVerbose is enabled, otherwise do nothing
+export function logVerbose(message: string): void {
   const config = getComplianceConfig();
   if (!config.monitorVerbose) return;
   console.log(`[compliance-monitor] ${message}`);
 }
 
+// Extract normalised wallet addresses from an escrow activity
 function extractWalletCandidates(activity: {
   walletAddress: string | null;
   counterpartyAddress: string | null;
@@ -42,101 +40,8 @@ function extractWalletCandidates(activity: {
   return Array.from(wallets);
 }
 
-async function processWalletRules(
-  walletAddress: string,
-  activity: {
-    sourceEventId: string;
-    txHash: string;
-    blockTimestamp: Date;
-    eventType:
-      | "JOB_CREATED"
-      | "JOB_ACCEPTED"
-      | "RELEASE_REQUESTED"
-      | "FUNDS_RELEASED"
-      | "JOB_CANCELLED";
-    amountWei: string | null;
-  },
-): Promise<void> {
-  const profile = await getOrCreateProfile(walletAddress);
-  const ruleCandidates = await evaluateRulesForWalletEvent(
-    walletAddress,
-    activity as any,
-  );
-
-  if (!ruleCandidates.length) {
-    return;
-  }
-
-  const createdTriggers: any[] = [];
-
-  for (const candidate of ruleCandidates) {
-    const created = await createRuleTriggerIfMissing(profile.id, candidate);
-    if (created) {
-      createdTriggers.push(created);
-    }
-  }
-
-  if (!createdTriggers.length) {
-    logVerbose(
-      `Rule candidates were duplicates for wallet ${walletAddress} on event ${activity.sourceEventId}`,
-    );
-    return;
-  }
-
-  logVerbose(
-    `Created ${createdTriggers.length} rule trigger(s) for wallet ${walletAddress}`,
-  );
-
-  const scoreDelta = createdTriggers.reduce(
-    (acc, trigger) => acc + Number(trigger.scoreDelta),
-    0,
-  );
-
-  const updatedProfile = await incrementProfileScore(
-    profile.id,
-    scoreDelta,
-    activity.blockTimestamp,
-  );
-
-  const config = getComplianceConfig();
-  const openCase = await getOpenCase(profile.id);
-  const triggerIds = createdTriggers.map((trigger) => trigger.id as number);
-
-  if (openCase) {
-    await attachTriggersToCase(openCase.id, triggerIds);
-    return;
-  }
-
-  if (Number(updatedProfile.cumulativeScore) < config.caseThreshold) {
-    return;
-  }
-
-  const triggeredRules = createdTriggers.map((trigger) =>
-    String(trigger.ruleName),
-  );
-
-  const evidence = {
-    walletAddress,
-    sourceEventId: activity.sourceEventId,
-    sourceTxHash: activity.txHash,
-    triggeredRules,
-    triggerIds,
-    triggeredAt: activity.blockTimestamp.toISOString(),
-  };
-
-  await createComplianceCase({
-    profileId: profile.id,
-    scoreAtCreation: Number(updatedProfile.cumulativeScore),
-    triggeredRules,
-    evidence,
-    triggerIds,
-  });
-
-  console.log(
-    `[compliance-monitor] Opened compliance case for ${walletAddress} with score ${updatedProfile.cumulativeScore}`,
-  );
-}
-
+// Poll the subgraph for new escrow events, ingest them, evaluate rules, and update compliance profiles and cases accordingly.
+// Uses a cursor to track the last processed event timestamp.
 export async function pollComplianceEventsOnce(): Promise<void> {
   if (polling) {
     return;
@@ -201,6 +106,7 @@ export async function pollComplianceEventsOnce(): Promise<void> {
   }
 }
 
+// Start the compliance monitor, which polls for new events at a configured interval and processes them
 export function startComplianceMonitor(): void {
   const config = getComplianceConfig();
 
@@ -231,6 +137,7 @@ export function startComplianceMonitor(): void {
   }, config.pollIntervalMs);
 }
 
+// Stop the compliance monitor and clear the polling timer
 export function stopComplianceMonitor(): void {
   if (timer) {
     clearInterval(timer);

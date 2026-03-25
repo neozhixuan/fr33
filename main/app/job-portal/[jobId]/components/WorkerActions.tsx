@@ -7,6 +7,9 @@ import ActionStatusCard from "./ActionStatusCard";
 import { useActionState, useState } from "react";
 import { checkIsUserActionAllowed } from "@/lib/vcActions";
 import { useRouter } from "next/navigation";
+import ReleaseEvidenceImageInput from "./ReleaseEvidenceImageInput";
+import { uploadEvidenceAndGetUrl } from "@/lib/cloudinary";
+import { formatDateOnly } from "@/utils/constants";
 
 interface ApplyJobFormProps {
   job: Omit<Job, "amount"> & { amount: number };
@@ -27,7 +30,7 @@ export default function WorkerActions({
   }>({
     acceptTxHash: job.acceptTxHash || "N/A",
     acceptedAt: job.acceptedAt
-      ? new Date(job.acceptedAt).toLocaleDateString()
+      ? formatDateOnly(job.acceptedAt)
       : undefined,
   });
 
@@ -37,9 +40,12 @@ export default function WorkerActions({
   }>({
     applyReleaseTxHash: job.applyReleaseTxHash || "N/A",
     appliedAt: job.applyReleaseAt
-      ? new Date(job.applyReleaseAt).toLocaleDateString()
+      ? formatDateOnly(job.applyReleaseAt)
       : undefined,
   });
+  const [releaseEvidenceText, setReleaseEvidenceText] = useState("");
+  const [releaseEvidenceImageDataUrl, setReleaseEvidenceImageDataUrl] = useState("");
+  const [releaseEvidenceImageName, setReleaseEvidenceImageName] = useState("");
 
   const [acceptJobState, applyAction, isAcceptJobPending] = useActionState(
     async () => {
@@ -74,15 +80,31 @@ export default function WorkerActions({
         return { success: false, errorMsg: "You are not allowed to apply for fund release." };
       }
 
+      if (!releaseEvidenceText.trim()) {
+        alert("Please provide evidence text before applying for fund release.");
+        return { success: false, errorMsg: "Please provide evidence text before applying for fund release." };
+      }
+
+      const { uploadSuccess, errorMsg: uploadErrorMsg, uploadedImageUrl } = await uploadEvidenceAndGetUrl(releaseEvidenceText, releaseEvidenceImageDataUrl);
+      if (!uploadSuccess) {
+        alert(uploadErrorMsg);
+        return { success: false, errorMsg: uploadErrorMsg };
+      }
+
       const { success, errorMsg, txHash } = await applyFundReleaseAction({
         jobId: job.id,
         workerId,
+        evidenceText: releaseEvidenceText,
+        evidenceImageDataUrl: uploadedImageUrl,
       });
       if (success) {
         setApplyFundReleaseState({
           applyReleaseTxHash: txHash ?? "Error",
           appliedAt: new Date().toLocaleDateString(),
         });
+        setReleaseEvidenceText("");
+        setReleaseEvidenceImageDataUrl("");
+        setReleaseEvidenceImageName("");
         router.refresh();
       }
 
@@ -114,13 +136,35 @@ export default function WorkerActions({
           {job.workerWallet &&
             job.workerWallet === workerWallet.address &&
             (applyFundReleaseState.applyReleaseTxHash === "N/A" ? (
-              <ActionForm
-                action={applyFundAction}
-                isPending={isApplyFundPending}
-                state={applyFundState}
-                buttonLabel="Apply for Fund Release"
-                successMessage="Fund release applied successfully!"
-              />
+              <div className="space-y-3 rounded-md border border-white/10 bg-[#131314]/50 p-3">
+                <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-[#b9cacb]">
+                  Work evidence (required)
+                </label>
+                <textarea
+                  value={releaseEvidenceText}
+                  onChange={(e) => setReleaseEvidenceText(e.target.value)}
+                  rows={4}
+                  placeholder="Describe work delivered, milestones completed, and handover notes..."
+                  className="w-full rounded-md border border-white/15 bg-[#131314] px-3 py-2 text-sm text-[#e5e2e3] outline-none placeholder:text-[#b9cacb]/60"
+                />
+
+                <ReleaseEvidenceImageInput
+                  imageName={releaseEvidenceImageName}
+                  imagePreviewUrl={releaseEvidenceImageDataUrl}
+                  onImageChange={({ imageName, imageDataUrl }) => {
+                    setReleaseEvidenceImageName(imageName);
+                    setReleaseEvidenceImageDataUrl(imageDataUrl);
+                  }}
+                />
+
+                <ActionForm
+                  action={applyFundAction}
+                  isPending={isApplyFundPending}
+                  state={applyFundState}
+                  buttonLabel="Apply for Fund Release"
+                  successMessage="Fund release applied successfully!"
+                />
+              </div>
             ) : (
               <ActionStatusCard
                 title="Fund release has been applied."
