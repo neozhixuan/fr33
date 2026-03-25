@@ -58,3 +58,13 @@ export type JobListingsResult = {
 };
 
 export type JobForClientType = Omit<Job, "amount"> & { amount: number };
+
+export type ReleaseEvidenceItem = {
+  id: number;
+  jobId: number;
+  type: string;
+  fileUrl: string;
+  notes: string | null;
+  uploadedAt: string;
+  uploadedBy: number;
+};

@@ -231,11 +231,19 @@ npm install
 
 1. Copy [main/.env.example](main/.env.example) to `main/.env`
 2. Fill at minimum:
+
    - `NEXT_POSTGRES_URL`
    - `NEXT_RPC_URL`
    - `NEXT_ESCROW_CONTRACT_ADDRESS`
    - `NEXT_VC_REGISTRY_ADDRESS`
    - Alchemy values (`NEXT_ALCHEMY_API_KEY`, `NEXT_ALCHEMY_GAS_POLICY_ID`)
+
+   Optional (worker evidence image upload):
+
+   - `CLOUDINARY_CLOUD_NAME`
+   - `CLOUDINARY_API_KEY`
+   - `CLOUDINARY_API_SECRET`
+   - `CLOUDINARY_EVIDENCE_FOLDER`
 
 #### Compliance service
 

@@ -2,7 +2,7 @@
 
 import { JobStatus } from "@/generated/prisma-client";
 import { JobListingsResult } from "@/type/general";
-import { POL_TO_SGD_RATE } from "@/utils/constants";
+import { POL_TO_SGD_RATE, formatDateOnly } from "@/utils/constants";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -205,7 +205,7 @@ export function JobListings({
                   </div>
                   <div className="space-y-1">
                     <p className="text-[10px] uppercase tracking-[0.2em] text-[#b9cacb]">Posted</p>
-                    <p className="text-sm text-[#e5e2e3]">{new Date(job.createdAt).toLocaleDateString()}</p>
+                    <p className="text-sm text-[#e5e2e3]">{formatDateOnly(job.createdAt)}</p>
                   </div>
                   <button
                     type="button"

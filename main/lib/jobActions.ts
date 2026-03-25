@@ -1,9 +1,10 @@
 "use server";
 
-import { Job, JobStatus } from "@/generated/prisma-client";
+import { Job, JobStatus, UserRole } from "@/generated/prisma-client";
 import {
   createJobListing,
   getJobDetails,
+  getReleaseEvidencesByJobId,
   getJobListings,
   updateJobAfterFunding,
   updateJobAfterAcceptJob,
@@ -14,6 +15,7 @@ import {
 } from "@/model/job";
 import {
   JobListingsResult,
+  ReleaseEvidenceItem,
   SmartAccountTransactionResult,
 } from "@/type/general";
 import { parseSGDToPolygon } from "./ether";
@@ -23,6 +25,18 @@ import { executeJobTransaction } from "@/utils/aaUtils";
 import { validateJobDetails } from "@/utils/jobUtils";
 
 import { redirect } from "next/navigation";
+
+const MAX_RELEASE_EVIDENCE_TEXT_LENGTH = 4000;
+const MAX_IMAGE_DATA_URL_LENGTH = 2_800_000; // ~2MB binary payload when base64 encoded
+
+function isHttpUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Create a job as an employer
@@ -153,8 +167,56 @@ export async function acceptJobAction(params: {
 export async function applyFundReleaseAction(params: {
   jobId: number;
   workerId: number;
+  evidenceText: string;
+  evidenceImageDataUrl?: string;
 }): Promise<SmartAccountTransactionResult> {
-  const { jobId, workerId } = params;
+  const { jobId, workerId, evidenceText, evidenceImageDataUrl } = params;
+
+  const trimmedEvidence = evidenceText.trim();
+  if (!trimmedEvidence) {
+    return {
+      success: false,
+      errorMsg: "Evidence text is required before applying for fund release",
+      txHash: "" as `0x${string}`,
+      userOpHash: "" as `0x${string}`,
+    };
+  }
+
+  if (trimmedEvidence.length > MAX_RELEASE_EVIDENCE_TEXT_LENGTH) {
+    return {
+      success: false,
+      errorMsg: `Evidence text must be <= ${MAX_RELEASE_EVIDENCE_TEXT_LENGTH} characters`,
+      txHash: "" as `0x${string}`,
+      userOpHash: "" as `0x${string}`,
+    };
+  }
+
+  const normalisedImageDataUrl = evidenceImageDataUrl?.trim() || "";
+  if (normalisedImageDataUrl) {
+    const isInlineImage = normalisedImageDataUrl.startsWith("data:image/");
+    const isRemoteImage = isHttpUrl(normalisedImageDataUrl);
+
+    if (!isInlineImage && !isRemoteImage) {
+      return {
+        success: false,
+        errorMsg: "Evidence image must be a valid URL or image data URL",
+        txHash: "" as `0x${string}`,
+        userOpHash: "" as `0x${string}`,
+      };
+    }
+
+    if (
+      isInlineImage &&
+      normalisedImageDataUrl.length > MAX_IMAGE_DATA_URL_LENGTH
+    ) {
+      return {
+        success: false,
+        errorMsg: "Evidence image is too large. Please keep it under 2MB",
+        txHash: "" as `0x${string}`,
+        userOpHash: "" as `0x${string}`,
+      };
+    }
+  }
 
   const { success, errorMsg } = await validateJobDetails(
     jobId,
@@ -169,12 +231,75 @@ export async function applyFundReleaseAction(params: {
     };
   }
 
+  const job = await getJobDetails(jobId);
+  if (!job) {
+    return {
+      success: false,
+      errorMsg: "Job not found",
+      txHash: "" as `0x${string}`,
+      userOpHash: "" as `0x${string}`,
+    };
+  }
+
+  const workerWalletAddress = await getWalletAddress(workerId);
+  if (
+    !job.workerWallet ||
+    job.workerWallet.toLowerCase() !== workerWalletAddress.toLowerCase()
+  ) {
+    return {
+      success: false,
+      errorMsg:
+        "Unauthorized: only the assigned worker can apply for fund release",
+      txHash: "" as `0x${string}`,
+      userOpHash: "" as `0x${string}`,
+    };
+  }
+
   return executeJobTransaction({
     userId: workerId,
     functionName: "requestRelease",
     functionArgs: [jobId],
-    onSuccess: (txHash) => updateJobAfterApplyFundRelease(jobId, txHash),
+    onSuccess: (txHash) =>
+      updateJobAfterApplyFundRelease(jobId, txHash, {
+        uploadedBy: workerId,
+        notes: trimmedEvidence,
+        fileUrl: normalisedImageDataUrl || null,
+      }),
   });
+}
+
+export async function getReleaseEvidencesForJobAction(params: {
+  jobId: number;
+  requesterUserId: number;
+  requesterRole: UserRole;
+  requesterWalletAddress?: string | null;
+}): Promise<ReleaseEvidenceItem[]> {
+  const { jobId, requesterUserId, requesterRole, requesterWalletAddress } =
+    params;
+
+  const job = await getJobDetails(jobId);
+  if (!job) {
+    throw new Error("Job not found");
+  }
+
+  const isAdmin = requesterRole === UserRole.ADMIN;
+  const isEmployer = job.employerId === requesterUserId;
+  const isAssignedWorker =
+    !!job.workerWallet &&
+    !!requesterWalletAddress &&
+    job.workerWallet.toLowerCase() === requesterWalletAddress.toLowerCase();
+
+  if (!isAdmin && !isEmployer && !isAssignedWorker) {
+    throw new Error(
+      "Unauthorized: only participants can view release evidence",
+    );
+  }
+
+  const rows = await getReleaseEvidencesByJobId(jobId);
+  return rows.map((item) => ({
+    ...item,
+    uploadedAt: item.uploadedAt.toISOString(),
+  }));
 }
 
 /**
@@ -187,6 +312,17 @@ export async function acceptFundReleaseAction(params: {
   employerId: number;
 }): Promise<SmartAccountTransactionResult> {
   const { jobId, employerId } = params;
+
+  const releaseEvidences = await getReleaseEvidencesByJobId(jobId);
+  if (releaseEvidences.length === 0) {
+    return {
+      success: false,
+      errorMsg:
+        "Cannot approve fund release: worker evidence is required before approval",
+      txHash: "" as `0x${string}`,
+      userOpHash: "" as `0x${string}`,
+    };
+  }
 
   const { success, errorMsg } = await validateJobDetails(
     jobId,

@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import { keccak256, toUtf8Bytes } from "ethers";
-import { IssueVCParams, VCResult } from "../../utils/types";
+import { IssueVCParams, VCResult } from "../../type/vc.types";
 import { buildVcRegistrationAuthorisation } from "../blockchain/blockchain.service";
 import { getIssuerAuthorisationSigner } from "../../lib/ether";
 

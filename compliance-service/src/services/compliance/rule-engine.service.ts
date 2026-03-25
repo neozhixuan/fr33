@@ -1,29 +1,18 @@
 import {
   countWalletEventsSince,
   getWalletCreatedEscrowActivities,
-} from "./compliance.repository";
-import { getComplianceConfig } from "./compliance.config";
+} from "../../model/escrow-activity.repository";
+import { getComplianceConfig } from "../../config/compliance.config";
 import {
   EscrowActivityRecord,
   RuleEvaluationCandidate,
-} from "./compliance.types";
-
-function subtractHours(from: Date, hours: number): Date {
-  return new Date(from.getTime() - hours * 60 * 60 * 1000);
-}
-
-function subtractMinutes(from: Date, minutes: number): Date {
-  return new Date(from.getTime() - minutes * 60 * 1000);
-}
-
-function sumBigInt(values: bigint[]): bigint {
-  return values.reduce((acc, current) => acc + current, 0n);
-}
-
-function toBigInt(value: string | null | undefined): bigint {
-  if (!value) return 0n;
-  return BigInt(value);
-}
+} from "../../type/compliance.types";
+import {
+  subtractHours,
+  subtractMinutes,
+  sumBigInt,
+  toBigInt,
+} from "../../utils/conv";
 
 function getFingerprint(
   ruleName: string,
@@ -33,6 +22,8 @@ function getFingerprint(
   return `${ruleName}:${walletAddress.toLowerCase()}:${sourceEventId}`;
 }
 
+// Main function
+// Evaluates compliance rules for a given wallet event, returning any triggered rules with details for further processing.
 export async function evaluateRulesForWalletEvent(
   walletAddress: string,
   activity: EscrowActivityRecord,

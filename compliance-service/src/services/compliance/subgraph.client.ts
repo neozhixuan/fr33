@@ -1,6 +1,7 @@
-import { getComplianceConfig } from "./compliance.config";
-import { SubgraphEscrowEvent } from "./compliance.types";
+import { getComplianceConfig } from "../../config/compliance.config";
+import { SubgraphEscrowEvent } from "../../type/compliance.types";
 
+// GraphQL query to fetch escrow events after a certain timestamp, with pagination support
 const ESCROW_EVENTS_QUERY = `
   query EscrowEventsAfter($fromTimestampExclusive: BigInt!, $first: Int!) {
     escrowEvents(
@@ -23,6 +24,14 @@ const ESCROW_EVENTS_QUERY = `
   }
 `;
 
+/**
+ * Fetches escrow events from the subgraph that occurred after a specified timestamp.
+ * Uses pagination to limit batch size.
+ * Returns an array of escrow events for processing.
+ * @param fromTimestampSec - Unix timestamp in seconds; only events with blockTimestamp greater than this will be returned
+ * @returns  Promise resolving to an array of SubgraphEscrowEvent objects
+ * @throws Error if the subgraph URL is not configured, if the HTTP request fails, or if the GraphQL response contains errors
+ */
 export async function fetchEscrowEventsAfter(
   fromTimestampSec: number,
 ): Promise<SubgraphEscrowEvent[]> {

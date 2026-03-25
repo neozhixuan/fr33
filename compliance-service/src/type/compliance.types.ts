@@ -47,3 +47,30 @@ export type RuleEvaluationCandidate = {
   sourceEventId: string;
   sourceTxHash: string;
 };
+
+export type ComplianceConfig = {
+  monitorEnabled: boolean;
+  monitorVerbose: boolean;
+  subgraphUrl: string;
+  pollIntervalMs: number;
+  fetchBatchSize: number;
+  caseThreshold: number;
+  largeEscrow: {
+    minBaselineTxCount: number;
+    lookbackHours: number;
+    multiplier: number;
+    absoluteMinWei: bigint;
+    scoreDelta: number;
+  };
+  disputeFrequency: {
+    lookbackHours: number;
+    minJobs: number;
+    disputeRatioThreshold: number;
+    scoreDelta: number;
+  };
+  burstActivity: {
+    windowMinutes: number;
+    minEventCount: number;
+    scoreDelta: number;
+  };
+};

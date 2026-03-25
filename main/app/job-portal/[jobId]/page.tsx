@@ -1,7 +1,8 @@
 "use server";
 
 import { JobStatus, UserRole } from "@/generated/prisma-client";
-import { getJobDetailsAction } from "@/lib/jobActions";
+import { getJobDetailsAction, getReleaseEvidencesForJobAction } from "@/lib/jobActions";
+import { ReleaseEvidenceItem } from "@/type/general";
 import { auth } from "@/server/auth";
 import { getFallbackURL } from "@/utils/errors";
 import { redirect } from "next/navigation";
@@ -54,6 +55,18 @@ export default async function JobPage({ params }: JobPageProps) {
     !!job.workerWallet &&
     wallet.address.toLowerCase() === job.workerWallet.toLowerCase();
 
+  let releaseEvidences: ReleaseEvidenceItem[] = [];
+  try {
+    releaseEvidences = await getReleaseEvidencesForJobAction({
+      jobId: job.id,
+      requesterUserId: user.id,
+      requesterRole: user.role,
+      requesterWalletAddress: wallet?.address ?? null,
+    });
+  } catch {
+    releaseEvidences = [];
+  }
+
   return (
     <main className="min-h-screen bg-[#131314] px-6 pb-14 pt-8 text-[#e5e2e3] md:px-8">
       <div className="mx-auto w-full max-w-[1400px] space-y-6">
@@ -98,6 +111,7 @@ export default async function JobPage({ params }: JobPageProps) {
                       job={jobForClient}
                       employerId={userId}
                       wallet={wallet}
+                      releaseEvidences={releaseEvidences}
                     />
                   </>
                 ) : (
