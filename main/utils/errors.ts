@@ -18,11 +18,12 @@ export const ERROR_TYPE_MAP = {
   DEFAULT: "default",
   KYC_INCOMPLETE: "kyc-incomplete",
   NEW_USER: "new-user",
+  VC_REVOKED: "vc-revoked",
 } as const;
 
 export const getLoginErrorMsg = (
   from: string,
-  authorisationError: string
+  authorisationError: string,
 ): string => {
   const error_msg_map: Record<string, string> = {
     [ERROR_TYPE_MAP.UNAUTHORISED]: `Please sign in to access ${from}, err: ${authorisationError}.`,
@@ -30,6 +31,7 @@ export const getLoginErrorMsg = (
     [ERROR_TYPE_MAP.KYC_INCOMPLETE]: `You have to complete KYC registration to access ${from}: ${authorisationError}.`,
     [ERROR_TYPE_MAP.NEW_USER]: `Welcome new user! Please login and complete the compliance process to access our ${from}.`,
     [ERROR_TYPE_MAP.SESSION_EXPIRED]: `Your session has expired while accessing ${from}. Please login again.`,
+    [ERROR_TYPE_MAP.VC_REVOKED]: `Your VC has been revoked, so access to ${from} is blocked. Please contact fr33@gmail.com for information.`,
   };
 
   return (

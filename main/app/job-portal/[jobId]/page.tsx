@@ -4,7 +4,6 @@ import { JobStatus, UserRole } from "@/generated/prisma-client";
 import { getJobDetailsAction, getReleaseEvidencesForJobAction } from "@/lib/jobActions";
 import { ReleaseEvidenceItem } from "@/type/general";
 import { auth } from "@/server/auth";
-import { getFallbackURL } from "@/utils/errors";
 import { redirect } from "next/navigation";
 import EmployerActions from "./components/EmployerActions";
 import Button from "@/ui/Button";
@@ -21,13 +20,8 @@ export default async function JobPage({ params }: JobPageProps) {
   const { jobId } = await params;
 
   const session = await auth();
-  if (!session || !session?.user || !session?.user?.id) {
-    redirect(getFallbackURL("job-portal", "unauthorised"));
-  }
-
-  const userId = parseInt(session.user.id as string);
-
-  const { user, wallet } = await ensureAuthorisedAndCompliantUser(session.user);
+  const { user, wallet } = await ensureAuthorisedAndCompliantUser(session?.user);
+  const userId = parseInt(user.id.toString());
 
   const job = await getJobDetailsAction(parseInt(jobId));
   if (!job) {

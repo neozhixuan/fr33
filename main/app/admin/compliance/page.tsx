@@ -6,12 +6,7 @@ import CompliancePortalContent from "./components/CompliancePortalContent";
 
 export default async function CompliancePortalPage() {
     const session = await auth();
-
-    if (!session?.user?.id) {
-        redirect("/");
-    }
-
-    const { user } = await ensureAuthorisedAndCompliantUser(session.user);
+    const { user } = await ensureAuthorisedAndCompliantUser(session?.user);
 
     // Redirect non-admins
     if (user.role !== UserRole.ADMIN) {

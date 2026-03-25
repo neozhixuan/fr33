@@ -1,6 +1,6 @@
 'use client';
 
-import { ComplianceCase } from '@/lib/complianceActions';
+import { ComplianceCase } from '@/type/complianceTypes';
 
 interface ComplianceStatsProps {
     cases: ComplianceCase[];

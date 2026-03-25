@@ -1,40 +1,37 @@
-export type SubgraphEscrowEvent = {
+// Escrow event metadata types
+export type EscrowEventTypes =
+  | "JOB_CREATED"
+  | "JOB_ACCEPTED"
+  | "RELEASE_REQUESTED"
+  | "FUNDS_RELEASED"
+  | "JOB_CANCELLED";
+
+type EscrowEventProperties = {
   id: string;
   jobId: string;
-  eventType:
-    | "JOB_CREATED"
-    | "JOB_ACCEPTED"
-    | "RELEASE_REQUESTED"
-    | "FUNDS_RELEASED"
-    | "JOB_CANCELLED";
-  wallet: string | null;
-  counterparty: string | null;
-  amount: string | null;
-  blockNumber: string;
-  blockTimestamp: string;
-  transactionHash: string;
-  logIndex: string;
-};
-
-export type EscrowActivityRecord = {
-  id: number;
-  sourceEventId: string;
-  jobId: bigint;
-  eventType:
-    | "JOB_CREATED"
-    | "JOB_ACCEPTED"
-    | "RELEASE_REQUESTED"
-    | "FUNDS_RELEASED"
-    | "JOB_CANCELLED";
-  walletAddress: string | null;
-  counterpartyAddress: string | null;
-  amountWei: string | null;
+  eventType: EscrowEventTypes;
   blockNumber: bigint;
   blockTimestamp: Date;
-  txHash: string;
   logIndex: number;
 };
 
+export type SubgraphEscrowEvent = {
+  wallet: string | null;
+  counterparty: string | null;
+  amount: string | null;
+  transactionHash: string;
+} & EscrowEventProperties;
+
+export type EscrowActivityRecord = {
+  sourceEventId: string;
+  walletAddress: string | null;
+  counterpartyAddress: string | null;
+  amountWei: string | null;
+  txHash: string;
+  createdAt: Date;
+} & EscrowEventProperties;
+
+// Compliance types
 export type RuleEvaluationCandidate = {
   ruleName:
     | "LARGE_ESCROW_ANOMALY"

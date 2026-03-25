@@ -1,6 +1,4 @@
 import { auth } from "@/server/auth";
-import { redirect } from "next/navigation";
-import { ERROR_TYPE_MAP, getFallbackURL } from "@/utils/errors";
 import { ensureAuthorisedAndCompliantUser } from "@/lib/authActions";
 import DisputeBoard from "./components/DisputeBoard";
 
@@ -10,11 +8,7 @@ export default async function DisputePage({
     searchParams?: Promise<{ jobId?: string }>;
 }) {
     const session = await auth();
-    if (!session?.user) {
-        redirect(getFallbackURL("dispute", ERROR_TYPE_MAP.UNAUTHORISED));
-    }
-
-    const { user } = await ensureAuthorisedAndCompliantUser(session.user);
+    const { user } = await ensureAuthorisedAndCompliantUser(session?.user);
     const params = await searchParams;
     const jobId = Number(params?.jobId);
 

@@ -387,3 +387,10 @@ The following libraries primarily work on React 18 instead of 19, and are instal
 - @alchemy/aa-core
 - @alchemy/aa-alchemy
 - viem
+
+Compliance portal logging notes:
+
+- Current portal log views are sourced from:
+  - Main service `app_service.audit_logs` (application audit events)
+  - Compliance monitoring/indexer `compliance_service.escrow_activity` (ingested on-chain lifecycle events)
+- Admin-action audit logs in compliance service are intentionally deferred to a future iteration.

@@ -1,11 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-
 interface CaseActionModalProps {
     caseId: number;
     actionType: 'dismiss' | 'revoke-vc';
-    onConfirm: (caseId: number, notes: string) => Promise<void>;
+    onConfirm: (caseId: number) => Promise<void>;
     onClose: () => void;
     isLoading: boolean;
 }
@@ -17,10 +15,8 @@ export default function CaseActionModal({
     onClose,
     isLoading,
 }: CaseActionModalProps) {
-    const [notes, setNotes] = useState('');
-
     const handleConfirm = async () => {
-        await onConfirm(caseId, notes);
+        await onConfirm(caseId);
     };
 
     const title =
@@ -38,14 +34,6 @@ export default function CaseActionModal({
             <div className="w-full max-w-md rounded-lg border border-white/10 bg-[#131314] p-6">
                 <h2 className="text-lg font-bold text-white">{title}</h2>
                 <p className="mt-2 text-sm text-gray-400">{description}</p>
-
-                <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Optional: Add notes for this action..."
-                    className="mt-4 w-full rounded border border-white/10 bg-[#0f0f10] p-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#00f2ff]"
-                    rows={3}
-                />
 
                 <div className="mt-6 flex gap-3">
                     <button

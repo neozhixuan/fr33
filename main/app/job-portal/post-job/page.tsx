@@ -1,19 +1,12 @@
 import { auth } from "@/server/auth";
 import Button from "@/ui/Button";
-import { ERROR_TYPE_MAP, getFallbackURL } from "@/utils/errors";
 import { redirect } from "next/navigation";
 import { ensureAuthorisedAndCompliantUser } from "@/lib/authActions";
 import { PostJobForm } from "./components";
 
 export default async function PostJobPage() {
-  const CURRENT_PAGE = "job-portal/post-job";
-
   const session = await auth();
-  if (!session || !session?.user) {
-    redirect(getFallbackURL(CURRENT_PAGE, ERROR_TYPE_MAP.UNAUTHORISED));
-  }
-
-  const { user, wallet } = await ensureAuthorisedAndCompliantUser(session.user);
+  const { user, wallet } = await ensureAuthorisedAndCompliantUser(session?.user);
   if (user.role !== "EMPLOYER") {
     redirect("/job-portal");
   }
