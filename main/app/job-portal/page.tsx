@@ -100,6 +100,15 @@ export default async function JobPortal({
               </NextLink>
             )}
 
+            {user.role === UserRole.ADMIN && (
+              <NextLink
+                href="/admin/compliance"
+                className="rounded-md bg-red-600 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-white shadow-[0_0_20px_rgba(220,38,38,0.25)] transition-all hover:brightness-110 md:px-6"
+              >
+                Compliance Portal
+              </NextLink>
+            )}
+
             <form action={logoutToHomeAction}>
               <button
                 type="submit"
