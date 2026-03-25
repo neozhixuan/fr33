@@ -34,6 +34,17 @@ export type DisputeDetailProps = {
   role: UserRole;
 };
 
+export type DisputeSummary = {
+  id: number;
+  jobId: number;
+  status: string;
+  openedByUserId: number;
+  openedAt: string;
+  createdAt: string;
+  updatedAt: string;
+  decisionReason: string | null;
+};
+
 // Backend
 export type DbDispute = {
   id: number;
