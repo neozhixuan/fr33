@@ -1,5 +1,40 @@
 import { JobStatus, UserRole } from "@/generated/prisma-client";
 
+// Frontend
+
+type DisputeEvidence = {
+  id: number;
+  submittedByRole: string;
+  evidenceType: string;
+  contentText: string;
+  createdAt: string;
+};
+
+export type DisputeDetailData = {
+  id: number;
+  jobId: number;
+  status: string;
+  decision: string | null;
+  decisionReason: string | null;
+  workerShareBps: number | null;
+  openedAt: string;
+  updatedAt: string;
+  job: {
+    id: number;
+    title: string;
+    employerId: number;
+    workerWallet: string | null;
+    status: string;
+  };
+  evidences: DisputeEvidence[];
+};
+
+export type DisputeDetailProps = {
+  disputeId: number;
+  role: UserRole;
+};
+
+// Backend
 export type DbDispute = {
   id: number;
   jobId: number;
