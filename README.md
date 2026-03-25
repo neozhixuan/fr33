@@ -65,36 +65,25 @@ flowchart TD
     B --> C[Load wallets + vcMetadata]
     C -->|has REVOKED VC| R[Force logout via /api/logout]
     R --> RL[Redirect to /login?from=job-portal&error=vc-revoked]
-    C -->|no VALID VC, not revoked| K[compliance onboarding]
+    C -->|no VALID VC, not revoked| K[Start 2 step compliance onboarding]
     C -->|has VALID VC| OK
 ```
 
 #### Compliance monitoring and case creation
 
 ```mermaid
-flowchart TD
-  E[1. User actions happen on-chain] --> SG[2. Subgraph picks up events]
-  SG --> MON[3. Compliance monitor polls new events]
-  MON --> INGEST[4. Save event in escrow_activity]
-
-  INGEST --> R1{Check LARGE_ESCROW_ANOMALY}
-  INGEST --> R2{Check HIGH_DISPUTE_FREQUENCY}
-  INGEST --> R3{Check BURST_ACTIVITY}
-
-  R1 --> COLLECT[Collect triggered rules]
-  R2 --> COLLECT
-  R3 --> COLLECT
-
-  COLLECT --> ANY{Any rule triggered?}
-  ANY -->|No| STOP[Stop: no risk update]
-  ANY -->|Yes| DEDUPE[Skip duplicates using fingerprint]
-
-  DEDUPE --> SCORE[Add scoreDelta to wallet profile]
-  SCORE --> CASECHK{Score >= caseThreshold?}
-  CASECHK -->|No| WATCH[Keep monitoring]
-  CASECHK -->|Yes| OPENCHK{Open case already exists?}
-  OPENCHK -->|Yes| ATTACH[Attach new triggers to open case]
-  OPENCHK -->|No| OPEN[Create new compliance case]
+flowchart LR
+  E[On-chain escrow event] --> SG[Subgraph indexes event]
+  SG --> ING[Compliance service ingests event]
+  ING --> RULES{Any risk rule hit?}
+  RULES -->|No| END1[No score change]
+  RULES -->|Yes| FP[Deduplicate by fingerprint]
+  FP --> SCORE[Increase wallet risk score]
+  SCORE --> TH{Score >= case threshold?}
+  TH -->|No| END2[Keep monitoring]
+  TH -->|Yes| OC{Open case already exists?}
+  OC -->|Yes| ATTACH[Attach trigger to open case]
+  OC -->|No| OPEN[Create new case]
 ```
 
 - Every escrow event is watched.
@@ -137,6 +126,65 @@ What is persisted off-chain:
 - state of the current dispute
 - evidences submitted by both parties
 - audit logs
+
+### Smart contracts
+
+#### 1) `JobEscrow.sol` state flow
+
+```mermaid
+flowchart LR
+  FUNDED -->|worker accepts| IN_PROGRESS
+  FUNDED -->|employer cancels| CANCELLED
+
+  IN_PROGRESS -->|worker requests release| PENDING_APPROVAL
+  IN_PROGRESS -->|employer or worker opens dispute| DISPUTED
+
+  PENDING_APPROVAL -->|employer approves| COMPLETED
+  PENDING_APPROVAL -->|timeout auto-release| COMPLETED
+  PENDING_APPROVAL -->|dispute opened| DISPUTED
+
+  DISPUTED -->|admin resolve RELEASE_TO_WORKER| COMPLETED
+  DISPUTED -->|admin resolve SPLIT| COMPLETED
+  DISPUTED -->|admin resolve RETURN_TO_EMPLOYER| CANCELLED
+```
+
+#### 2) `VCRegistry.sol` credential lifecycle
+
+```mermaid
+flowchart LR
+  NEW[Not registered] -->|issuer registers VC| ACTIVE[Active VC]
+  ACTIVE -->|expiry time passes| EXPIRED[Expired VC]
+  ACTIVE -->|issuer revokes| REVOKED[Revoked VC]
+```
+
+Rule used by app/compliance checks:
+
+- valid VC = exists + correct subject + not revoked + not expired
+
+### Trust model
+
+#### What is trust-minimized (on-chain guarantees)
+
+- Escrow money movement and dispute payout logic in `JobEscrow.sol`
+- VC revocation/validity flags in `VCRegistry.sol`
+- Anyone can verify these from chain state/events
+
+#### What is trusted infrastructure (off-chain)
+
+- Main app database (`app_service`) for users, jobs mirror, disputes, evidence, audit logs
+- Compliance service for monitoring, rule evaluation, score computation, case management
+- Subgraph/indexer freshness and uptime
+
+#### Human/admin trust assumptions
+
+- Admin can resolve disputes and choose rationale/split
+- Authorised issuer can issue/revoke VCs
+- These are visible/auditable, but still privileged roles
+
+#### Practical takeaway
+
+- Money custody + final payout rules are enforced by smart contracts
+- Product UX, compliance workflows, and evidence handling are off-chain service logic
 
 ### Data model snapshot
 
