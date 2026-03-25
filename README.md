@@ -65,24 +65,43 @@ flowchart TD
     B --> C[Load wallets + vcMetadata]
     C -->|has REVOKED VC| R[Force logout via /api/logout]
     R --> RL[Redirect to /login?from=job-portal&error=vc-revoked]
-    C -->|no VALID VC, not revoked| K[/compliance onboarding]
+    C -->|no VALID VC, not revoked| K[compliance onboarding]
     C -->|has VALID VC| OK
 ```
 
 #### Compliance monitoring and case creation
 
 ```mermaid
-flowchart LR
-    E[Escrow events on-chain] --> S[Subgraph indexes events]
-    S --> M[compliance-service monitor poller]
-    M --> A[escrow_activity ingestion]
-    A --> RE[rule-engine evaluateRulesForWalletEvent]
-    RE --> RT[rule_trigger create-if-missing by fingerprint]
-    RT --> P[profile cumulativeScore += scoreDelta]
-    P --> T{score >= caseThreshold?}
-    T -->|yes| C[create/open compliance case]
-    T -->|no| N[no case]
+flowchart TD
+  E[1. User actions happen on-chain] --> SG[2. Subgraph picks up events]
+  SG --> MON[3. Compliance monitor polls new events]
+  MON --> INGEST[4. Save event in escrow_activity]
+
+  INGEST --> R1{Check LARGE_ESCROW_ANOMALY}
+  INGEST --> R2{Check HIGH_DISPUTE_FREQUENCY}
+  INGEST --> R3{Check BURST_ACTIVITY}
+
+  R1 --> COLLECT[Collect triggered rules]
+  R2 --> COLLECT
+  R3 --> COLLECT
+
+  COLLECT --> ANY{Any rule triggered?}
+  ANY -->|No| STOP[Stop: no risk update]
+  ANY -->|Yes| DEDUPE[Skip duplicates using fingerprint]
+
+  DEDUPE --> SCORE[Add scoreDelta to wallet profile]
+  SCORE --> CASECHK{Score >= caseThreshold?}
+  CASECHK -->|No| WATCH[Keep monitoring]
+  CASECHK -->|Yes| OPENCHK{Open case already exists?}
+  OPENCHK -->|Yes| ATTACH[Attach new triggers to open case]
+  OPENCHK -->|No| OPEN[Create new compliance case]
 ```
+
+- Every escrow event is watched.
+- Each event is tested against 3 risk rules.
+- If no rules fire, nothing happens.
+- If rules fire, the wallet's risk score goes up.
+- When score gets high enough, a case is opened (or updated if one is already open).
 
 Current deterministic rules:
 
