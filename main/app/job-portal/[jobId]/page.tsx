@@ -10,6 +10,7 @@ import Button from "@/ui/Button";
 import { ensureAuthorisedAndCompliantUser } from "@/lib/authActions";
 import WorkerActions from "./components/WorkerActions";
 import MainJobSection from "./components/MainJobSection";
+import DisputeActions from "./components/DisputeActions";
 
 type JobPageProps = {
   params: Promise<{ jobId: string }>;
@@ -47,6 +48,12 @@ export default async function JobPage({ params }: JobPageProps) {
       job.status === JobStatus.IN_PROGRESS ||
       job.status === JobStatus.PENDING_APPROVAL);
 
+  const isEmployer = userId === job.employerId;
+  const isAssignedWorker =
+    !!wallet?.address &&
+    !!job.workerWallet &&
+    wallet.address.toLowerCase() === job.workerWallet.toLowerCase();
+
   return (
     <main className="min-h-screen bg-[#131314] px-6 pb-14 pt-8 text-[#e5e2e3] md:px-8">
       <div className="mx-auto w-full max-w-[1400px] space-y-6">
@@ -68,7 +75,7 @@ export default async function JobPage({ params }: JobPageProps) {
           </div>
 
           <aside className="space-y-6 xl:col-span-4">
-            {userId === job.employerId && (
+            {isEmployer && (
               <section className="rounded-xl border border-[#00f2ff]/15 bg-[#1c1b1c]/80 p-5">
                 <h2 className="mb-2 text-sm font-bold uppercase tracking-[0.2em] text-[#00f2ff]">
                   Employer Actions
@@ -129,6 +136,13 @@ export default async function JobPage({ params }: JobPageProps) {
                 )}
               </section>
             )}
+
+            <DisputeActions
+              jobId={job.id}
+              jobStatus={job.status}
+              canOpenDispute={isEmployer || isAssignedWorker}
+              isAdmin={user.role === UserRole.ADMIN}
+            />
           </aside>
         </div>
       </div>

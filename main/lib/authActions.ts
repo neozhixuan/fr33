@@ -153,6 +153,11 @@ export async function ensureAuthorisedAndCompliantUser(
     redirect(`/api/logout?redirectTo=${encodeURIComponent(target)}`);
   }
 
+  // Admin access is role-based and does not require user-wallet VC compliance.
+  if (user.role === UserRole.ADMIN) {
+    return { user, wallet };
+  }
+
   if (!isCompliant) {
     // Session user needs to complete compliance
     redirect("/compliance");
