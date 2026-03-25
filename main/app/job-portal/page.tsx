@@ -1,6 +1,4 @@
 import { auth } from "@/server/auth";
-import { redirect } from "next/navigation";
-import { ERROR_TYPE_MAP, getFallbackURL } from "@/utils/errors";
 import { ensureAuthorisedAndCompliantUser, logoutToHomeAction } from "@/lib/authActions";
 import { UserRole } from "@/generated/prisma-client";
 import { getJobListingsAction } from "@/lib/jobActions";
@@ -20,7 +18,6 @@ export default async function JobPortal({
 }) {
   const resolvedSearchParams = await searchParams;
 
-  const CURRENT_PAGE = "job-portal";
   const page = Math.max(1, Number(resolvedSearchParams?.page) || 1);
   const pageSize = 10;
   const view = resolvedSearchParams?.view === "my-gigs" ? "my-gigs" : "all";
@@ -29,12 +26,7 @@ export default async function JobPortal({
 
   // Authenticate user
   const session = await auth();
-  if (!session || !session?.user) {
-    redirect(getFallbackURL(CURRENT_PAGE, ERROR_TYPE_MAP.UNAUTHORISED));
-  }
-
-  // Check if session user is still valid + compliant
-  const { user, wallet } = await ensureAuthorisedAndCompliantUser(session.user);
+  const { user, wallet } = await ensureAuthorisedAndCompliantUser(session?.user);
 
   const jobs = await getJobListingsAction(page, pageSize);
   const shortWallet = wallet?.address
@@ -97,6 +89,15 @@ export default async function JobPortal({
                 className="rounded-md bg-[#00f2ff] px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-[#00363a] shadow-[0_0_20px_rgba(0,242,255,0.25)] transition-all hover:brightness-110 md:px-6"
               >
                 Post a Job
+              </NextLink>
+            )}
+
+            {user.role === UserRole.ADMIN && (
+              <NextLink
+                href="/admin/compliance"
+                className="rounded-md bg-red-600 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-white shadow-[0_0_20px_rgba(220,38,38,0.25)] transition-all hover:brightness-110 md:px-6"
+              >
+                Compliance Portal
               </NextLink>
             )}
 

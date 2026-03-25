@@ -66,6 +66,7 @@ type UserIsCompliantResult = {
   user: User | undefined;
   wallet: Wallet | undefined;
   isCompliant: boolean;
+  hasRevokedVc: boolean;
 };
 
 /**
@@ -89,16 +90,30 @@ export async function getUserAuthorisationStatus(
     });
 
     if (!user) {
-      return { user: undefined, wallet: undefined, isCompliant: false };
+      return {
+        user: undefined,
+        wallet: undefined,
+        isCompliant: false,
+        hasRevokedVc: false,
+      };
     }
 
-    // Check if any wallet has valid VC
-    const isCompliant = user.wallets.some(
-      (wallet) =>
-        wallet && wallet.vcMetadata && wallet.vcMetadata.status === "VALID",
+    const compliantWallet = user.wallets.find(
+      (wallet) => wallet?.vcMetadata?.status === "VALID",
     );
-    // TODO
-    return { user, wallet: user.wallets[0], isCompliant };
+
+    const hasRevokedVc = user.wallets.some(
+      (wallet) => wallet?.vcMetadata?.status === "REVOKED",
+    );
+
+    const isCompliant = Boolean(compliantWallet);
+
+    return {
+      user,
+      wallet: compliantWallet ?? user.wallets[0],
+      isCompliant,
+      hasRevokedVc,
+    };
   } catch (error) {
     console.error("Failed to check user compliance:", error);
     throw new Error("Failed to check user compliance: " + error);

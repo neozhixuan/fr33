@@ -13,6 +13,7 @@ import {
 } from "../../model/rule-trigger.repository";
 import { evaluateRulesForWalletEvent } from "./rule-engine.service";
 import { logVerbose } from "./monitor.service";
+import { EscrowEventTypes } from "../../type/compliance.types";
 
 // Process wallet activity, evaluate rules, create rule triggers, update profile score, and open compliance case if threshold exceeded
 export async function processWalletRules(
@@ -21,12 +22,7 @@ export async function processWalletRules(
     sourceEventId: string;
     txHash: string;
     blockTimestamp: Date;
-    eventType:
-      | "JOB_CREATED"
-      | "JOB_ACCEPTED"
-      | "RELEASE_REQUESTED"
-      | "FUNDS_RELEASED"
-      | "JOB_CANCELLED";
+    eventType: EscrowEventTypes;
     amountWei: string | null;
   },
 ): Promise<void> {

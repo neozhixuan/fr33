@@ -135,17 +135,14 @@ export async function updateOnboardingStageAction(
  * Server component (runs on Node runtime) - Block SSR if auth doesn't pass
  */
 export async function ensureAuthorisedAndCompliantUser(
-  sessionUser: User,
+  sessionUser: User | null | undefined,
 ): Promise<{ user: DBUser; wallet: Wallet | undefined }> {
-  if (!sessionUser.id) {
-    throw new Error(
-      "User ID is missing in session: " + JSON.stringify(sessionUser),
-    );
+  if (!sessionUser?.id) {
+    redirect(getFallbackURL("job-portal", ERROR_TYPE_MAP.UNAUTHORISED));
   }
   const userId = stringToInt(sessionUser.id as string);
-  const { user, wallet, isCompliant } = await getUserAuthorisationStatus(
-    userId,
-  );
+  const { user, wallet, isCompliant, hasRevokedVc } =
+    await getUserAuthorisationStatus(userId);
   if (!user) {
     // Session user is no longer valid
     const target = getFallbackURL("job-portal", ERROR_TYPE_MAP.UNAUTHORISED);
@@ -156,6 +153,12 @@ export async function ensureAuthorisedAndCompliantUser(
   // Admin access is role-based and does not require user-wallet VC compliance.
   if (user.role === UserRole.ADMIN) {
     return { user, wallet };
+  }
+
+  if (hasRevokedVc) {
+    const target = getFallbackURL("job-portal", ERROR_TYPE_MAP.VC_REVOKED);
+    // Clear current session and force fresh login with revoked VC guidance.
+    redirect(`/api/logout?redirectTo=${encodeURIComponent(target)}`);
   }
 
   if (!isCompliant) {

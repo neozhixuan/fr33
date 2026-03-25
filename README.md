@@ -1,212 +1,240 @@
 # fr33
 
-A blueprint for compliance-aware business-to-consumer blockchain payments in Singapore, using a freelance marketplace model (e.g. Upwork) as a demonstration.
+A compliance-aware freelance escrow protocol (Singapore-focused demonstrator) built as a monorepo:
 
-## Solution Architecture
+- `main`: Next.js app (UI + server actions + Prisma for `app_service`)
+- `compliance-service`: Express + Prisma microservice (`issuer_service`, `compliance_service`)
+- `smart-contracts`: Hardhat contracts (`JobEscrow`, `VCRegistry`) + subgraph package
 
-### System Architecture
+## System Architecture
 
 ```mermaid
-graph TB
-    subgraph "Presentation Layer"
-        WEB["Web Application\nNext.js + React"]
+graph LR
+    subgraph Client
+      U[Employer / Worker / Admin]
+      UI[Next.js 16 App Router\nmain]
     end
 
-    subgraph "Application Layer"
-        WALLET["Wallet Abstraction Service\n(Alchemy)"]
-        AUTH["Authentication Service\nNextAuth"]
-        API["API Gateway\nNext.js API Routes"]
-        JOB["Job Management Service\nPostgreSQL"]
-        MONITOR["Transaction Monitor\nAML/CFT Rules Engine"]
+    subgraph Main_Service
+      SA[Server Actions\nauth/job/dispute/compliance]
+      DB[(Postgres\napp_service)]
+      AA[Alchemy AA + Bundler/Paymaster]
     end
 
-    subgraph "Compliance Layer"
-        SINGPASS["Singpass OAuth\nMock/Production"]
-        COMPLIANCE["Compliance Microservice\nVC Issuer & Verifier"]
-        AUDIT["Audit Database\nPostgreSQL"]
-        REPORTING["Regulatory Reporting\nSTR Generation"]
+    subgraph Compliance_Service
+      CS[Express API\ncompliance-service]
+      CDB[(Postgres\nissuer_service + compliance_service)]
+      MON[Subgraph monitor\nrule engine + processor]
     end
 
-    subgraph "Blockchain Layer"
-        BUNDLER["Bundler\n(Alchemy)"]
-        PAYMASTER["Paymaster for Gas Sponsorship (Alchemy)"]
-        ESCROW["JobEscrow Contract\nSolidity"]
-        POLYGON["Polygon PoS Chain\nLayer 2 Network"]
-        VCREGISTRY["VcRegistry Contract\nSolidity"]
+    subgraph Blockchain
+      ESC[JobEscrow.sol]
+      VCR[VCRegistry.sol]
+      AMOY[Polygon Amoy]
     end
 
-    subgraph "External Systems"
-        MAS["MAS Reporting Portal"]
-        OFFRAMP["Fiat Off-Ramp\nXfers/Transak"]
+    subgraph Indexing
+      SG[Graph Node Subgraph\nsmart-contracts/subgraph]
     end
 
-    subgraph "Data Layer"
-        USER["User Table"]
-        WALLETDB["Wallet Table"]
-        AUDITLOG["Audit Log Table"]
-        VCMETADATA["VC Metadata Table"]
-        JOB
-    end
-
-    WEB --> API
-
-    API --> AUTH
-    API --> JOB
-    API --> WALLET
-    API --> MONITOR
-
-    AUTH --> SINGPASS
-    WALLET --> COMPLIANCE
-    MONITOR --> AUDIT
-    MONITOR --> REPORTING
-
-    WALLET --> BUNDLER
-    BUNDLER --> PAYMASTER
-    BUNDLER --> POLYGON
-
-    ESCROW --> POLYGON
-
-    COMPLIANCE --> AUDIT
-    REPORTING --> MAS
-    WALLET --> OFFRAMP
-
-    COMPLIANCE -.issues VC.-> VCREGISTRY
-    JOB -.validates VC.-> VCMETADATA
-    JOB -.validates VC.-> VCREGISTRY
-
-    USER -.has.-> WALLETDB
-    USER -.performs.-> AUDITLOG
-    WALLETDB -.has.-> VCMETADATA
-
-    JOB --> USER
-    JOB --> AUDITLOG
-
-    style POLYGON fill:#8b5cf6
-    style ESCROW fill:#8b5cf6
-    style COMPLIANCE fill:#f59e0b
-    style SINGPASS fill:#f59e0b
-    style BUNDLER fill:#3b82f6
-    style PAYMASTER fill:#3b82f6
+    U --> UI
+    UI --> SA
+    SA --> DB
+    SA --> CS
+    SA --> AA
+    AA --> ESC
+    AA --> VCR
+    ESC --> AMOY
+    VCR --> AMOY
+    AMOY --> SG
+    SG --> MON
+    MON --> CDB
+    CS --> CDB
+    CS --> VCR
 ```
 
-1. **Main Application Backend (Next.js Full-Stack Application)**
+### Core workflows
 
-   Handles user authentication, job marketplace logic, escrow orchestration, and interaction with blockchain infrastructure.
+#### Compliance gate + revoked VC handling
 
-2. **Compliance Microservice**
+```mermaid
+flowchart TD
+    A[User requests protected page] --> B[ensureAuthorisedAndCompliantUser]
+    B -->|no session / invalid user| L[Redirect to /login?from=job-portal&error=unauthorised]
+    B -->|admin| OK[Allow]
+    B --> C[Load wallets + vcMetadata]
+    C -->|has REVOKED VC| R[Force logout via /api/logout]
+    R --> RL[Redirect to /login?from=job-portal&error=vc-revoked]
+    C -->|no VALID VC, not revoked| K[Start 2 step compliance onboarding]
+    C -->|has VALID VC| OK
+```
 
-   Acts as a trusted issuer and verifier of VCs, handling KYC verification, credential issuance, verification, and revocation logic. Also deploys the cryptographic anchor of the VC on chain for the main service to perform validation.
+#### Compliance monitoring and case creation
 
-3. **Blockchain Layer**
+```mermaid
+flowchart LR
+  E[On-chain escrow event] --> SG[Subgraph indexes event]
+  SG --> ING[Compliance service ingests event]
+  ING --> RULES{Any risk rule hit?}
+  RULES -->|No| END1[No score change]
+  RULES -->|Yes| FP[Deduplicate by fingerprint]
+  FP --> SCORE[Increase wallet risk score]
+  SCORE --> TH{Score >= case threshold?}
+  TH -->|No| END2[Keep monitoring]
+  TH -->|Yes| OC{Open case already exists?}
+  OC -->|Yes| ATTACH[Attach trigger to open case]
+  OC -->|No| OPEN[Create new case]
+```
 
-   Holds the smart contracts that are deployed on a Ethereum-compatible network to manage escrow payments, as well as Account Abstraction infrastructure for smart wallet execution.
+- Every escrow event is watched.
+- Each event is tested against 3 risk rules.
+- If no rules fire, nothing happens.
+- If rules fire, the wallet's risk score goes up.
+- When score gets high enough, a case is opened (or updated if one is already open).
 
-4. **External Trust and Infrastructure Services**
+Current deterministic rules:
 
-   Includes mocked SingPass microservice and blockchain node providers (e.g. Alchemy).
+- `LARGE_ESCROW_ANOMALY`
+- `HIGH_DISPUTE_FREQUENCY`
+- `BURST_ACTIVITY`
 
-### Database Design
+#### Dispute resolution process (on-chain + off-chain)
 
-#### Main Service (app_service schema)
+```mermaid
+sequenceDiagram
+    participant Admin
+    participant Main as main/disputeActions
+    participant DB as app_service.disputes
+    participant Escrow as JobEscrow.sol
+
+    Admin->>Main: decideDisputeAction(outcome, rationale, workerShareBps?)
+    Main->>DB: setDisputeDecisionPendingOnchain(...)
+    Main->>Escrow: resolveDispute(jobId, enum, workerShareBps, rationale)
+    Escrow-->>Main: txHash
+    Main->>DB: markDisputeOnchainResolved(txHash)
+```
+
+What is committed on-chain:
+
+- outcome (as an enumeration)
+- split basis points [optional]
+- rationale of this decision
+- payout amounts and resolution event
+
+What is persisted off-chain:
+
+- state of the current dispute
+- evidences submitted by both parties
+- audit logs
+
+### Smart contracts
+
+#### 1) `JobEscrow.sol` state flow
+
+```mermaid
+flowchart LR
+  FUNDED -->|worker accepts| IN_PROGRESS
+  FUNDED -->|employer cancels| CANCELLED
+
+  IN_PROGRESS -->|worker requests release| PENDING_APPROVAL
+  IN_PROGRESS -->|employer or worker opens dispute| DISPUTED
+
+  PENDING_APPROVAL -->|employer approves| COMPLETED
+  PENDING_APPROVAL -->|timeout auto-release| COMPLETED
+  PENDING_APPROVAL -->|dispute opened| DISPUTED
+
+  DISPUTED -->|admin resolve RELEASE_TO_WORKER| COMPLETED
+  DISPUTED -->|admin resolve SPLIT| COMPLETED
+  DISPUTED -->|admin resolve RETURN_TO_EMPLOYER| CANCELLED
+```
+
+#### 2) `VCRegistry.sol` credential lifecycle
+
+```mermaid
+flowchart LR
+  NEW[Not registered] -->|issuer registers VC| ACTIVE[Active VC]
+  ACTIVE -->|expiry time passes| EXPIRED[Expired VC]
+  ACTIVE -->|issuer revokes| REVOKED[Revoked VC]
+```
+
+Rule used by app/compliance checks:
+
+- valid VC = exists + correct subject + not revoked + not expired
+
+### Trust model
+
+#### What is trust-minimized (on-chain guarantees)
+
+- Escrow money movement and dispute payout logic in `JobEscrow.sol`
+- VC revocation/validity flags in `VCRegistry.sol`
+- Anyone can verify these from chain state/events
+
+#### What is trusted infrastructure (off-chain)
+
+- Main app database (`app_service`) for users, jobs mirror, disputes, evidence, audit logs
+- Compliance service for monitoring, rule evaluation, score computation, case management
+- Subgraph/indexer freshness and uptime
+
+#### Human/admin trust assumptions
+
+- Admin can resolve disputes and choose rationale/split
+- Authorised issuer can issue/revoke VCs
+- These are visible/auditable, but still privileged roles
+
+#### Practical takeaway
+
+- Money custody + final payout rules are enforced by smart contracts
+- Product UX, compliance workflows, and evidence handling are off-chain service logic
+
+### Data model snapshot
+
+#### Main service schema (`app_service`) — simplified ER
 
 ```mermaid
 erDiagram
-    USER ||--o{ WALLET : has
-    USER ||--o{ AUDIT_LOG : performs
-    WALLET ||--o| VC_METADATA : contains
+    USERS ||--o{ WALLETS : owns
+    WALLETS ||--o| VC_METADATA : has
+    USERS ||--o{ AUDIT_LOGS : writes
 
-    USER {
-        int id PK
-        string email UK
-        string passwordHash
-        enum role "WORKER, EMPLOYER, ADMIN"
-        enum onboardingStage "WALLET_PENDING, KYC_PENDING, VC_PENDING, COMPLETED"
-        timestamp createdAt
-        timestamp updatedAt
-    }
+    JOBS ||--o{ RELEASE_EVIDENCE : receives
+    JOBS ||--o{ DISPUTES : can_have
 
-    WALLET {
-        int id PK
-        int userId FK
-        string address UK
-        string did UK
-        string encryptedSignerKey
-        string signerKeyIv
-        enum status "ACTIVE, SUSPENDED, REVOKED"
-        string suspensionReason
-        timestamp createdAt
-    }
+    USERS ||--o{ DISPUTES : opens
+    USERS ||--o{ DISPUTES : decides
+    DISPUTES ||--o{ DISPUTE_EVIDENCE : collects
+    USERS ||--o{ DISPUTE_EVIDENCE : submits
+```
 
-    VC_METADATA {
-        int id PK
-        int walletId FK "UNIQUE"
-        string vcHash
-        timestamp issuedAt
-        timestamp expiresAt
-        string issuerDid
-        enum status "VALID, EXPIRED, REVOKED"
-    }
+Core tables:
 
-    JOB {
-        int id PK
-        int employerId
-        string workerWallet "nullable"
-        string title
-        string description
-        decimal amount
-        string fundedTxHash "nullable"
-        timestamp fundedAt "nullable"
-        string acceptTxHash "nullable"
-        timestamp acceptedAt "nullable"
-        string applyReleaseTxHash "nullable"
-        timestamp applyReleaseAt "nullable"
-        string approveReleaseTxHash "nullable"
-        timestamp approveReleaseAt "nullable"
-        enum status "POSTED, FUNDED, IN_PROGRESS, PENDING_APPROVAL, COMPLETED, DISPUTED"
-        timestamp createdAt
-    }
+- `users`, `wallets`, `vc_metadata`
+- `jobs`
+- `disputes`, `dispute_evidence`
+- `release_evidence`
+- `audit_logs`
 
-    AUDIT_LOG {
-        int id PK
-        int userId FK "nullable"
-        string walletAddress "nullable"
-        string action
-        json metadata "nullable"
-        string ipAddress "nullable"
-        enum result "ALLOWED, BLOCKED"
-        timestamp createdAt
+#### Compliance service schemas — simplified ER
+
+```mermaid
+erDiagram
+    COMPLIANCE_PROFILES ||--o{ COMPLIANCE_RULE_TRIGGERS : accumulates
+    COMPLIANCE_PROFILES ||--o{ COMPLIANCE_CASES : opens
+    COMPLIANCE_CASES ||--o{ COMPLIANCE_RULE_TRIGGERS : links
+
+    ESCROW_ACTIVITY }o--o| COMPLIANCE_RULE_TRIGGERS : source_event
+    COMPLIANCE_INGESTION_CURSOR ||--|| ESCROW_ACTIVITY : tracks_ingestion
+
+    ISSUED_VC {
+      string vcHash
+      string subjectDid
+      enum status
     }
 ```
 
-1. **User table**
+Schemas:
 
-   Handles authentication and authorisation, and identity in the application layer.
-
-2. **Wallet table**
-
-   Handles the smart wallet created in accordance to ERC-4337 Account Abstraction.
-
-3. **VC Metadata table**
-
-   Handles the KYC verification of a user, and the storage of issued Verifiable Credentials (VCs). Checks for the expiration/revocation of a VC.
-
-4. **Job table**
-
-   Handles jobs created by employers, including on-chain funding metadata (`fundedTxHash`, `fundedAt`) and status lifecycle.
-
-5. **Audit Log table**
-
-   Stores each action performed by a specific user.
-
-### Decentralised Authentication Design
-
-Users will have to register for an account.
-
-- Through the KYC process, a Verifiable Credential transaction is created in the Polygon Amoy testnet for.
-
-Users will then be authenticated upon each gated action.
-
-- The backend will make a call to the smart contract to verify that the Verifiable Credential is not revoked.
+- `issuer_service`: `issued_vc` (+ `VCStatus`)
+- `compliance_service`: `escrow_activity`, `compliance_profiles`, `compliance_rule_triggers`, `compliance_cases`, `compliance_ingestion_cursor`
 
 ## Setup
 
@@ -382,8 +410,24 @@ Unable to send transactions on Metamask
 
 ## Notes
 
-The following libraries primarily work on React 18 instead of 19, and are installed using legacy-peer-deps:
+- Compliance portal data sources:
 
-- @alchemy/aa-core
-- @alchemy/aa-alchemy
-- viem
+  - Main service `app_service.audit_logs` (application actions)
+  - Compliance indexer `compliance_service.escrow_activity` (ingested lifecycle events)
+
+- Admin portal quality-of-life updates now include:
+
+  - repository abstraction for compliance Prisma calls in main service
+  - rule label descriptions + trigger explanation summaries in UI
+  - sticky tab navigation + account details visibility in case views
+
+- Manual VC revocation now handles both hash formats:
+
+  - `0x` prefixed 32-byte hex
+  - bare 64-char hex
+
+- Revoked VC users are force-logged-out and redirected to login with `vc-revoked` error and support contact guidance.
+
+## Future Implementation
+
+- Admin action logging in compliance microservice

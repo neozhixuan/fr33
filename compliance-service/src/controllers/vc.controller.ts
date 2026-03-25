@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { issueVC } from "../services/issuer/vcIssuer.service";
 
+// Controller for issuing a Verifiable Credential (VC)
 export const issueVCController = async (req: Request, res: Response) => {
   try {
     const { subjectDid, kycData } = req.body;
@@ -16,10 +17,8 @@ export const issueVCController = async (req: Request, res: Response) => {
     return res.json(result);
   } catch (err) {
     console.error(err);
-    return res
-      .status(500)
-      .json({
-        error: `VC issuance failed due to error: ${(err as Error).message}`,
-      });
+    return res.status(500).json({
+      error: `VC issuance failed due to error: ${(err as Error).message}`,
+    });
   }
 };

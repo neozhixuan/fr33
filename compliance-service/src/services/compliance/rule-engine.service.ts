@@ -14,6 +14,8 @@ import {
   toBigInt,
 } from "../../utils/conv";
 
+// Function to generate a unique fingerprint for a rule trigger based on the rule name, wallet address, and source event ID.
+// This helps prevent duplicate triggers for the same event.
 function getFingerprint(
   ruleName: string,
   walletAddress: string,

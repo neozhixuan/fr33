@@ -1,6 +1,7 @@
 import { prisma } from "../lib/db";
 import {
   EscrowActivityRecord,
+  EscrowEventTypes,
   SubgraphEscrowEvent,
 } from "../type/compliance.types";
 
@@ -79,4 +80,35 @@ export async function ingestEscrowEvent(
   });
 
   return { created: true, activity: created as EscrowActivityRecord };
+}
+
+// REPO: List escrow activities with optional filtering by wallet and event type, and pagination support
+export async function listEscrowActivities(filters: {
+  wallet?: string;
+  eventType?: EscrowEventTypes;
+  limit?: number;
+  offset?: number;
+}): Promise<Array<EscrowActivityRecord & { createdAt: Date }>> {
+  const take = Math.min(Math.max(filters.limit ?? 100, 1), 500);
+  const skip = Math.max(filters.offset ?? 0, 0);
+
+  return db.escrowActivity.findMany({
+    where: {
+      ...(filters.wallet
+        ? {
+            walletAddress: filters.wallet.toLowerCase(),
+          }
+        : {}),
+      ...(filters.eventType
+        ? {
+            eventType: filters.eventType,
+          }
+        : {}),
+    },
+    orderBy: {
+      blockTimestamp: "desc",
+    },
+    take,
+    skip,
+  }) as Promise<Array<EscrowActivityRecord & { createdAt: Date }>>;
 }

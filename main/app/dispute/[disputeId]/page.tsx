@@ -1,6 +1,5 @@
 import { auth } from "@/server/auth";
 import { redirect } from "next/navigation";
-import { ERROR_TYPE_MAP, getFallbackURL } from "@/utils/errors";
 import { ensureAuthorisedAndCompliantUser } from "@/lib/authActions";
 import DisputeDetail from "./components/DisputeDetail";
 
@@ -10,11 +9,7 @@ export default async function DisputeDetailsPage({
     params: Promise<{ disputeId: string }>;
 }) {
     const session = await auth();
-    if (!session?.user) {
-        redirect(getFallbackURL("dispute", ERROR_TYPE_MAP.UNAUTHORISED));
-    }
-
-    const { user } = await ensureAuthorisedAndCompliantUser(session.user);
+    const { user } = await ensureAuthorisedAndCompliantUser(session?.user);
     const parsedId = Number((await params).disputeId);
 
     if (!Number.isInteger(parsedId) || parsedId <= 0) {

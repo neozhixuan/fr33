@@ -9,6 +9,9 @@ datasource db {
     schemas  = ["issuer_service", "compliance_service"]
 }
 
+////////////////////////////////////////////////
+// Verifiable Credentials related models
+////////////////////////////////////////////////
 model IssuedVC {
     id         Int      @id @default(autoincrement())
     vcHash     String   @unique
@@ -28,6 +31,35 @@ enum VCStatus {
     @@schema("issuer_service")
 }
 
+////////////////////////////////////////////////
+// Compliance and data ingestion related models
+////////////////////////////////////////////////
+enum EscrowEventType {
+    JOB_CREATED
+    JOB_ACCEPTED
+    RELEASE_REQUESTED
+    FUNDS_RELEASED
+    JOB_CANCELLED
+
+    @@schema("compliance_service")
+}
+
+enum ComplianceRuleName {
+    LARGE_ESCROW_ANOMALY
+    HIGH_DISPUTE_FREQUENCY
+    BURST_ACTIVITY
+
+    @@schema("compliance_service")
+}
+
+enum ComplianceCaseStatus {
+    OPEN
+    DISMISSED
+    ACTIONED
+
+    @@schema("compliance_service")
+}
+
 model EscrowActivity {
     id                  Int             @id @default(autoincrement())
     sourceEventId       String          @unique
@@ -45,16 +77,6 @@ model EscrowActivity {
     @@index([walletAddress, blockTimestamp])
     @@index([eventType, blockTimestamp])
     @@map("escrow_activity")
-    @@schema("compliance_service")
-}
-
-enum EscrowEventType {
-    JOB_CREATED
-    JOB_ACCEPTED
-    RELEASE_REQUESTED
-    FUNDS_RELEASED
-    JOB_CANCELLED
-
     @@schema("compliance_service")
 }
 
@@ -101,14 +123,6 @@ model ComplianceRuleTrigger {
     @@schema("compliance_service")
 }
 
-enum ComplianceRuleName {
-    LARGE_ESCROW_ANOMALY
-    HIGH_DISPUTE_FREQUENCY
-    BURST_ACTIVITY
-
-    @@schema("compliance_service")
-}
-
 model ComplianceCase {
     id              Int                     @id @default(autoincrement())
     profileId       Int
@@ -126,13 +140,5 @@ model ComplianceCase {
 
     @@index([status, createdAt])
     @@map("compliance_cases")
-    @@schema("compliance_service")
-}
-
-enum ComplianceCaseStatus {
-    OPEN
-    DISMISSED
-    ACTIONED
-
     @@schema("compliance_service")
 }

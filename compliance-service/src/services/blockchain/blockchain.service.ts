@@ -131,8 +131,11 @@ export async function revokeVcRegistryTx(vcHash: string) {
 
   try {
     const trimmed = vcHash.trim();
-    const tx = /^0x[0-9a-fA-F]{64}$/.test(trimmed)
-      ? await contract.revokeCredentialHash(trimmed)
+    const isBytes32Hex =
+      /^0x[0-9a-fA-F]{64}$/.test(trimmed) || /^[0-9a-fA-F]{64}$/.test(trimmed);
+
+    const tx = isBytes32Hex
+      ? await contract.revokeCredentialHash(normaliseVcHash(trimmed))
       : await contract.revokeCredential(trimmed);
     const receipt = await tx.wait();
     return receipt.hash;

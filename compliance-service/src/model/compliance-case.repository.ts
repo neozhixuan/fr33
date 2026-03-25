@@ -47,6 +47,46 @@ export async function actionComplianceCase(
   });
 }
 
+// REPO: Get specific compliance case by ID, including related profile and triggers
+export async function getComplianceCaseById(
+  caseId: number,
+): Promise<any | null> {
+  return db.complianceCase.findUnique({
+    where: { id: caseId },
+    include: {
+      profile: true,
+      ruleTriggers: true,
+    },
+  });
+}
+
+// REPO: Set a VC as revoked
+export async function markIssuedVcRevoked(vcHash: string): Promise<number> {
+  const trimmed = vcHash.trim();
+  const candidates = new Set<string>([trimmed]);
+
+  if (/^[0-9a-fA-F]{64}$/.test(trimmed)) {
+    candidates.add(`0x${trimmed}`);
+  }
+
+  if (/^0x[0-9a-fA-F]{64}$/.test(trimmed)) {
+    candidates.add(trimmed.slice(2));
+  }
+
+  const result = await db.issuedVC.updateMany({
+    where: {
+      vcHash: {
+        in: Array.from(candidates),
+      },
+    },
+    data: {
+      status: "REVOKED",
+    },
+  });
+
+  return result.count;
+}
+
 // REPO: Update a job after approving fund release with the transaction hash
 export async function listComplianceCases(filters: {
   status?: "OPEN" | "DISMISSED" | "ACTIONED";
