@@ -142,7 +142,7 @@ export async function checkIsUserActionAllowed(
  * @param subjectAddress Address of wallet that the VC was issued to
  * @returns boolean indicating if the VC is valid
  */
-export async function checkIsVcValid(
+async function checkIsVcValid(
   vcHash: string,
   subjectAddress: string,
 ): Promise<boolean> {

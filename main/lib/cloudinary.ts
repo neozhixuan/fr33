@@ -5,7 +5,7 @@ import { v2 as cloudinary } from "cloudinary";
 // Global variable to track if Cloudinary has been configured
 let cloudinaryConfigured = false;
 
-export async function hasCloudinaryConfig() {
+async function hasCloudinaryConfig() {
   return Boolean(
     process.env.CLOUDINARY_CLOUD_NAME &&
       process.env.CLOUDINARY_API_KEY &&
@@ -21,7 +21,7 @@ function requireEnv(name: string): string {
   return value;
 }
 
-export async function getCloudinaryClient(): Promise<typeof cloudinary> {
+async function getCloudinaryClient(): Promise<typeof cloudinary> {
   if (!cloudinaryConfigured) {
     cloudinary.config({
       cloud_name: requireEnv("CLOUDINARY_CLOUD_NAME"),
@@ -35,7 +35,7 @@ export async function getCloudinaryClient(): Promise<typeof cloudinary> {
   return cloudinary;
 }
 
-export async function getCloudinaryEvidenceFolder() {
+async function getCloudinaryEvidenceFolder() {
   return process.env.CLOUDINARY_EVIDENCE_FOLDER || "fr33/release-evidence";
 }
 

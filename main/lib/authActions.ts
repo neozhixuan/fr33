@@ -4,18 +4,11 @@ import { signIn, signOut } from "@/server/auth";
 import {
   createUserAfterPasswordHash,
   getUserAuthorisationStatus,
-  updateUserOnboardingStage,
 } from "@/model/user";
 import { AuthError, User } from "next-auth";
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
-import { ExecutionResult } from "@/type/general";
-import {
-  OnboardingStage,
-  UserRole,
-  User as DBUser,
-  Wallet,
-} from "@/generated/prisma-client";
+import { UserRole, User as DBUser, Wallet } from "@/generated/prisma-client";
 import { stringToInt } from "@/utils/conv";
 import { ERROR_TYPE_MAP, getFallbackURL } from "@/utils/errors";
 
@@ -104,29 +97,6 @@ export async function registrationAction(
     }
     // Non-auth error
     return (error as Error).message || "Unknown error, please try again";
-  }
-}
-
-/**
- * Server action to update user's onboarding stage
- * Can be called from client components
- * @param userId - user's unique id
- * @param newStage - new onboarding stage
- * @returns success boolean and optional errorMsg
- */
-export async function updateOnboardingStageAction(
-  userId: number,
-  newStage: OnboardingStage,
-): Promise<ExecutionResult> {
-  try {
-    await updateUserOnboardingStage(userId, newStage);
-    return { success: true };
-  } catch (error) {
-    console.error("Failed to update onboarding stage:", error);
-    return {
-      success: false,
-      errorMsg: error instanceof Error ? error.message : "Unknown error",
-    };
   }
 }
 

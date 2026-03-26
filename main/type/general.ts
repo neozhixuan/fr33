@@ -1,15 +1,5 @@
 import { Job, Wallet } from "@/generated/prisma-client";
 
-// KYC Data
-export type KycDataDTO = {
-  fullName: string;
-  kycVerified: boolean;
-  idType: string;
-  idNumber: string;
-  dob: string;
-  kycTimestamp: string;
-};
-
 // VC Data
 export type VCRegistrationAuthorisation = {
   vcHash: string;
@@ -30,9 +20,6 @@ export type VCData = {
 };
 
 export type IssueVCResponse = VCData & ExecutionResult;
-
-// Smart Account Details
-export type SmartAccountDetails = Pick<Wallet, "address">;
 
 export type PreparedSmartAccountTransaction = {
   target: `0x${string}`;

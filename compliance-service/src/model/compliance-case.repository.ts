@@ -47,19 +47,6 @@ export async function actionComplianceCase(
   });
 }
 
-// REPO: Get specific compliance case by ID, including related profile and triggers
-export async function getComplianceCaseById(
-  caseId: number,
-): Promise<any | null> {
-  return db.complianceCase.findUnique({
-    where: { id: caseId },
-    include: {
-      profile: true,
-      ruleTriggers: true,
-    },
-  });
-}
-
 // REPO: Set a VC as revoked
 export async function markIssuedVcRevoked(vcHash: string): Promise<number> {
   const trimmed = vcHash.trim();

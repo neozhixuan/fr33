@@ -1,5 +1,5 @@
 // Redirect URL for auth failure
-export const UNAUTHORISED_REDIRECT_URL = "/login";
+const UNAUTHORISED_REDIRECT_URL = "/login";
 
 /**
  * Returns a variation of /login URL with query params

@@ -8,8 +8,6 @@ import {
 } from "@/model/compliance";
 import {
   ComplianceCase,
-  ComplianceProfile,
-  ComplianceRuleTrigger,
   EscrowEventTypes,
   ListCasesResponse,
   MainServiceAuditLog,
@@ -104,20 +102,6 @@ export async function listComplianceCases(filters?: {
     cases: enrichedCases,
     total: payload?.total ?? enrichedCases.length,
   };
-}
-
-// Service function to get compliance profile of a wallet
-export async function getComplianceProfile(
-  walletAddress: string,
-): Promise<ComplianceProfile & { ruleTriggers?: ComplianceRuleTrigger[] }> {
-  const url = `${COMPLIANCE_SERVICE_URL}/compliance/profiles/${walletAddress}`;
-  const res = await fetch(url, { cache: "no-store" });
-
-  if (!res.ok) {
-    throw new Error(`Failed to fetch compliance profile: ${res.statusText}`);
-  }
-
-  return res.json();
 }
 
 // Service function to dismiss a compliance case by its ID

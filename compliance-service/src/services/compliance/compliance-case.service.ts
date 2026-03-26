@@ -52,7 +52,7 @@ export async function revokeAnyVc(params: { vcHash: string; notes?: string }) {
   };
 }
 
-export async function listMonitoringEvents(params: {
+async function listMonitoringEvents(params: {
   wallet?: string;
   eventType?: EscrowEventTypes;
   limit?: number;

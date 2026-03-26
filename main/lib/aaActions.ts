@@ -1,7 +1,7 @@
 "use server";
 
 import { createUserWalletRecord } from "@/model/user";
-import { ExecutionResult, SmartAccountTransactionResult } from "@/type/general";
+import { ExecutionResult } from "@/type/general";
 import { getWalletByUserId } from "@/model/wallet";
 import { auth } from "@/server/auth";
 import { stringToInt } from "@/utils/conv";
@@ -77,31 +77,3 @@ export const createWallet = async (
 
   return { success: true };
 };
-
-/**
- * @deprecated Server-side signing is intentionally disabled.
- * Use the client-side embedded wallet flow with explicit user approval.
- */
-export async function createSmartAccount() {
-  throw new Error(
-    "Server-side smart account creation is disabled. Use embedded wallet creation on the client.",
-  );
-}
-
-/**
- * @deprecated Server-side signing is intentionally disabled.
- */
-export async function sendSmartAccountTransaction(
-  _userId: number,
-  _to: string,
-  _data: string,
-  _value?: bigint,
-): Promise<SmartAccountTransactionResult> {
-  void _userId;
-  void _to;
-  void _data;
-  void _value;
-  throw new Error(
-    "Server-side user signing is disabled. Transactions must be submitted from client embedded wallet with explicit user approval.",
-  );
-}

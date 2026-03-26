@@ -38,7 +38,7 @@ function extractWalletCandidates(activity: {
 
 // Poll the subgraph for new escrow events, ingest them, evaluate rules, and update compliance profiles and cases accordingly.
 // Uses an in-memory cursor that starts at process start time and resets on restart.
-export async function pollComplianceEventsOnce(): Promise<void> {
+async function pollComplianceEventsOnce(): Promise<void> {
   if (polling) {
     return;
   }
