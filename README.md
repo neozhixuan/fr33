@@ -220,9 +220,7 @@ erDiagram
     COMPLIANCE_PROFILES ||--o{ COMPLIANCE_RULE_TRIGGERS : accumulates
     COMPLIANCE_PROFILES ||--o{ COMPLIANCE_CASES : opens
     COMPLIANCE_CASES ||--o{ COMPLIANCE_RULE_TRIGGERS : links
-
     ESCROW_ACTIVITY }o--o| COMPLIANCE_RULE_TRIGGERS : source_event
-    COMPLIANCE_INGESTION_CURSOR ||--|| ESCROW_ACTIVITY : tracks_ingestion
 
     ISSUED_VC {
       string vcHash
@@ -234,7 +232,7 @@ erDiagram
 Schemas:
 
 - `issuer_service`: `issued_vc` (+ `VCStatus`)
-- `compliance_service`: `escrow_activity`, `compliance_profiles`, `compliance_rule_triggers`, `compliance_cases`, `compliance_ingestion_cursor`
+- `compliance_service`: `escrow_activity`, `compliance_profiles`, `compliance_rule_triggers`, `compliance_cases`
 
 ## Setup
 
