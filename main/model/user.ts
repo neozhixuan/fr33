@@ -158,8 +158,6 @@ export async function updateUserOnboardingStage(
 export async function createUserWalletRecord(
   userId: number,
   smartAccountAddress: string,
-  encryptedSignerKey: string,
-  signerKeyIv: string,
 ): Promise<void> {
   try {
     await prisma.$transaction(async (tx) => {
@@ -168,8 +166,10 @@ export async function createUserWalletRecord(
           userId,
           address: smartAccountAddress,
           did: `did:ethr:polygon:amoy:${smartAccountAddress}`,
-          encryptedSignerKey,
-          signerKeyIv,
+          // Legacy columns retained in schema for backward compatibility.
+          // Sensitive signing material is no longer persisted server-side.
+          encryptedSignerKey: "CLIENT_MANAGED",
+          signerKeyIv: "CLIENT_MANAGED",
         },
       });
 

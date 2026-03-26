@@ -15,13 +15,14 @@ import {
 } from "@/model/job";
 import {
   JobListingsResult,
+  PreparedSmartAccountTransactionResult,
   ReleaseEvidenceItem,
   SmartAccountTransactionResult,
 } from "@/type/general";
 import { parseSGDToPolygon } from "./ether";
 import { getWalletAddress } from "./aaActions";
 
-import { executeJobTransaction } from "@/utils/aaUtils";
+import { buildEscrowTransactionRequest } from "@/utils/aaUtils";
 import { validateJobDetails } from "@/utils/jobUtils";
 
 import { redirect } from "next/navigation";
@@ -87,15 +88,19 @@ export async function getJobDetailsAction(jobId: number): Promise<Job | null> {
   return getJobDetails(jobId);
 }
 
+function isTxHash(value: string): value is `0x${string}` {
+  return /^0x[a-fA-F0-9]{64}$/.test(value);
+}
+
 /**
  * Funds a specific escrow for a job
  * @param params - { jobId: number; employerId: number }
  * @returns
  */
-export async function fundEscrowAction(params: {
+export async function prepareFundEscrowAction(params: {
   jobId: number;
   employerId: number;
-}): Promise<SmartAccountTransactionResult> {
+}): Promise<PreparedSmartAccountTransactionResult> {
   const { jobId, employerId } = params;
   const job = await getJobDetails(jobId);
   if (!job) throw new Error("Job not found");
@@ -110,18 +115,52 @@ export async function fundEscrowAction(params: {
     return {
       success: false,
       errorMsg,
+    };
+  }
+
+  const txRequest = await buildEscrowTransactionRequest({
+    functionName: "fundJob",
+    functionArgs: [jobId],
+    amount: amountInWei,
+    summary: `Fund escrow for job #${jobId}`,
+  });
+
+  return { success: true, txRequest };
+}
+
+export async function confirmFundEscrowAction(params: {
+  jobId: number;
+  employerId: number;
+  txHash: string;
+  userOpHash: string;
+}): Promise<SmartAccountTransactionResult> {
+  const { jobId, employerId, txHash, userOpHash } = params;
+
+  const { success, errorMsg } = await validateJobDetails(
+    jobId,
+    JobStatus.POSTED,
+    employerId,
+  );
+  if (!success) {
+    return {
+      success: false,
+      errorMsg,
       txHash: "" as `0x${string}`,
       userOpHash: "" as `0x${string}`,
     };
   }
 
-  return executeJobTransaction({
-    userId: employerId,
-    functionName: "fundJob",
-    functionArgs: [jobId],
-    amount: amountInWei,
-    onSuccess: (txHash) => updateJobAfterFunding(jobId, txHash),
-  });
+  if (!isTxHash(txHash) || !isTxHash(userOpHash)) {
+    return {
+      success: false,
+      errorMsg: "Invalid transaction hash format",
+      txHash: "" as `0x${string}`,
+      userOpHash: "" as `0x${string}`,
+    };
+  }
+
+  await updateJobAfterFunding(jobId, txHash);
+  return { success: true, txHash, userOpHash };
 }
 
 /**
@@ -129,11 +168,39 @@ export async function fundEscrowAction(params: {
  * @param params - { jobId: number; workerId: number }
  * @returns
  */
-export async function acceptJobAction(params: {
+export async function prepareAcceptJobAction(params: {
   jobId: number;
   workerId: number;
-}) {
+}): Promise<PreparedSmartAccountTransactionResult> {
   const { jobId, workerId } = params;
+
+  const { success, errorMsg } = await validateJobDetails(
+    jobId,
+    JobStatus.FUNDED,
+  );
+  if (!success) {
+    return {
+      success: false,
+      errorMsg,
+    };
+  }
+
+  const txRequest = await buildEscrowTransactionRequest({
+    functionName: "acceptJob",
+    functionArgs: [jobId],
+    summary: `Accept job #${jobId}`,
+  });
+
+  return { success: true, txRequest };
+}
+
+export async function confirmAcceptJobAction(params: {
+  jobId: number;
+  workerId: number;
+  txHash: string;
+  userOpHash: string;
+}): Promise<SmartAccountTransactionResult> {
+  const { jobId, workerId, txHash, userOpHash } = params;
 
   const { success, errorMsg } = await validateJobDetails(
     jobId,
@@ -148,15 +215,18 @@ export async function acceptJobAction(params: {
     };
   }
 
-  return executeJobTransaction({
-    userId: workerId,
-    functionName: "acceptJob",
-    functionArgs: [jobId],
-    onSuccess: async (txHash) => {
-      const workerWalletAddress = await getWalletAddress(workerId);
-      return updateJobAfterAcceptJob(jobId, workerWalletAddress, txHash);
-    },
-  });
+  if (!isTxHash(txHash) || !isTxHash(userOpHash)) {
+    return {
+      success: false,
+      errorMsg: "Invalid transaction hash format",
+      txHash: "" as `0x${string}`,
+      userOpHash: "" as `0x${string}`,
+    };
+  }
+
+  const workerWalletAddress = await getWalletAddress(workerId);
+  await updateJobAfterAcceptJob(jobId, workerWalletAddress, txHash);
+  return { success: true, txHash, userOpHash };
 }
 
 /**
@@ -164,12 +234,12 @@ export async function acceptJobAction(params: {
  * @param params - { jobId: number; workerId: number }
  * @returns
  */
-export async function applyFundReleaseAction(params: {
+export async function prepareApplyFundReleaseAction(params: {
   jobId: number;
   workerId: number;
   evidenceText: string;
   evidenceImageDataUrl?: string;
-}): Promise<SmartAccountTransactionResult> {
+}): Promise<PreparedSmartAccountTransactionResult> {
   const { jobId, workerId, evidenceText, evidenceImageDataUrl } = params;
 
   const trimmedEvidence = evidenceText.trim();
@@ -177,8 +247,6 @@ export async function applyFundReleaseAction(params: {
     return {
       success: false,
       errorMsg: "Evidence text is required before applying for fund release",
-      txHash: "" as `0x${string}`,
-      userOpHash: "" as `0x${string}`,
     };
   }
 
@@ -186,8 +254,6 @@ export async function applyFundReleaseAction(params: {
     return {
       success: false,
       errorMsg: `Evidence text must be <= ${MAX_RELEASE_EVIDENCE_TEXT_LENGTH} characters`,
-      txHash: "" as `0x${string}`,
-      userOpHash: "" as `0x${string}`,
     };
   }
 
@@ -200,8 +266,6 @@ export async function applyFundReleaseAction(params: {
       return {
         success: false,
         errorMsg: "Evidence image must be a valid URL or image data URL",
-        txHash: "" as `0x${string}`,
-        userOpHash: "" as `0x${string}`,
       };
     }
 
@@ -212,8 +276,6 @@ export async function applyFundReleaseAction(params: {
       return {
         success: false,
         errorMsg: "Evidence image is too large. Please keep it under 2MB",
-        txHash: "" as `0x${string}`,
-        userOpHash: "" as `0x${string}`,
       };
     }
   }
@@ -226,6 +288,59 @@ export async function applyFundReleaseAction(params: {
     return {
       success: false,
       errorMsg,
+    };
+  }
+
+  const job = await getJobDetails(jobId);
+  if (!job) {
+    return {
+      success: false,
+      errorMsg: "Job not found",
+    };
+  }
+
+  const workerWalletAddress = await getWalletAddress(workerId);
+  if (
+    !job.workerWallet ||
+    job.workerWallet.toLowerCase() !== workerWalletAddress.toLowerCase()
+  ) {
+    return {
+      success: false,
+      errorMsg:
+        "Unauthorized: only the assigned worker can apply for fund release",
+    };
+  }
+
+  const txRequest = await buildEscrowTransactionRequest({
+    functionName: "requestRelease",
+    functionArgs: [jobId],
+    summary: `Request fund release for job #${jobId}`,
+  });
+
+  return { success: true, txRequest };
+}
+
+export async function confirmApplyFundReleaseAction(params: {
+  jobId: number;
+  workerId: number;
+  evidenceText: string;
+  evidenceImageDataUrl?: string;
+  txHash: string;
+  userOpHash: string;
+}): Promise<SmartAccountTransactionResult> {
+  const {
+    jobId,
+    workerId,
+    evidenceText,
+    evidenceImageDataUrl,
+    txHash,
+    userOpHash,
+  } = params;
+
+  if (!isTxHash(txHash) || !isTxHash(userOpHash)) {
+    return {
+      success: false,
+      errorMsg: "Invalid transaction hash format",
       txHash: "" as `0x${string}`,
       userOpHash: "" as `0x${string}`,
     };
@@ -255,17 +370,13 @@ export async function applyFundReleaseAction(params: {
     };
   }
 
-  return executeJobTransaction({
-    userId: workerId,
-    functionName: "requestRelease",
-    functionArgs: [jobId],
-    onSuccess: (txHash) =>
-      updateJobAfterApplyFundRelease(jobId, txHash, {
-        uploadedBy: workerId,
-        notes: trimmedEvidence,
-        fileUrl: normalisedImageDataUrl || null,
-      }),
+  await updateJobAfterApplyFundRelease(jobId, txHash, {
+    uploadedBy: workerId,
+    notes: evidenceText.trim(),
+    fileUrl: evidenceImageDataUrl?.trim() || null,
   });
+
+  return { success: true, txHash, userOpHash };
 }
 
 export async function getReleaseEvidencesForJobAction(params: {
@@ -307,10 +418,10 @@ export async function getReleaseEvidencesForJobAction(params: {
  * @param params - { jobId: number; employerId: number }
  * @returns
  */
-export async function acceptFundReleaseAction(params: {
+export async function prepareAcceptFundReleaseAction(params: {
   jobId: number;
   employerId: number;
-}): Promise<SmartAccountTransactionResult> {
+}): Promise<PreparedSmartAccountTransactionResult> {
   const { jobId, employerId } = params;
 
   const releaseEvidences = await getReleaseEvidencesByJobId(jobId);
@@ -319,8 +430,6 @@ export async function acceptFundReleaseAction(params: {
       success: false,
       errorMsg:
         "Cannot approve fund release: worker evidence is required before approval",
-      txHash: "" as `0x${string}`,
-      userOpHash: "" as `0x${string}`,
     };
   }
 
@@ -332,17 +441,51 @@ export async function acceptFundReleaseAction(params: {
     return {
       success: false,
       errorMsg,
+    };
+  }
+
+  const txRequest = await buildEscrowTransactionRequest({
+    functionName: "approveRelease",
+    functionArgs: [jobId],
+    summary: `Approve fund release for job #${jobId}`,
+  });
+
+  return { success: true, txRequest };
+}
+
+export async function confirmAcceptFundReleaseAction(params: {
+  jobId: number;
+  employerId: number;
+  txHash: string;
+  userOpHash: string;
+}): Promise<SmartAccountTransactionResult> {
+  const { jobId, employerId, txHash, userOpHash } = params;
+
+  const { success, errorMsg } = await validateJobDetails(
+    jobId,
+    JobStatus.PENDING_APPROVAL,
+    employerId,
+  );
+  if (!success) {
+    return {
+      success: false,
+      errorMsg,
       txHash: "" as `0x${string}`,
       userOpHash: "" as `0x${string}`,
     };
   }
 
-  return executeJobTransaction({
-    userId: employerId,
-    functionName: "approveRelease",
-    functionArgs: [jobId],
-    onSuccess: (txHash) => updateJobAfterAcceptFundRelease(jobId, txHash),
-  });
+  if (!isTxHash(txHash) || !isTxHash(userOpHash)) {
+    return {
+      success: false,
+      errorMsg: "Invalid transaction hash format",
+      txHash: "" as `0x${string}`,
+      userOpHash: "" as `0x${string}`,
+    };
+  }
+
+  await updateJobAfterAcceptFundRelease(jobId, txHash);
+  return { success: true, txHash, userOpHash };
 }
 
 /**
@@ -396,11 +539,40 @@ export async function deleteJobAction(params: {
  * @param params - { jobId: number; employerId: number }
  * @returns
  */
-export async function refundPaymentAction(params: {
+export async function prepareRefundPaymentAction(params: {
   jobId: number;
   employerId: number;
-}): Promise<SmartAccountTransactionResult> {
+}): Promise<PreparedSmartAccountTransactionResult> {
   const { jobId, employerId } = params;
+
+  const { success, errorMsg } = await validateJobDetails(
+    jobId,
+    [JobStatus.FUNDED, JobStatus.IN_PROGRESS],
+    employerId,
+  );
+  if (!success) {
+    return {
+      success: false,
+      errorMsg,
+    };
+  }
+
+  const txRequest = await buildEscrowTransactionRequest({
+    functionName: "cancelJob",
+    functionArgs: [jobId],
+    summary: `Refund escrow for job #${jobId}`,
+  });
+
+  return { success: true, txRequest };
+}
+
+export async function confirmRefundPaymentAction(params: {
+  jobId: number;
+  employerId: number;
+  txHash: string;
+  userOpHash: string;
+}): Promise<SmartAccountTransactionResult> {
+  const { jobId, employerId, txHash, userOpHash } = params;
 
   const { success, errorMsg } = await validateJobDetails(
     jobId,
@@ -416,10 +588,15 @@ export async function refundPaymentAction(params: {
     };
   }
 
-  return executeJobTransaction({
-    userId: employerId,
-    functionName: "cancelJob",
-    functionArgs: [jobId],
-    onSuccess: () => updateJobAfterRefundPayment(jobId),
-  });
+  if (!isTxHash(txHash) || !isTxHash(userOpHash)) {
+    return {
+      success: false,
+      errorMsg: "Invalid transaction hash format",
+      txHash: "" as `0x${string}`,
+      userOpHash: "" as `0x${string}`,
+    };
+  }
+
+  await updateJobAfterRefundPayment(jobId);
+  return { success: true, txHash, userOpHash };
 }

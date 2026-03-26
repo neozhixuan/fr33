@@ -130,6 +130,23 @@ export async function getDisputeDetails(
           title: true,
           status: true,
           applyReleaseAt: true,
+          fundedTxHash: true,
+          acceptTxHash: true,
+          applyReleaseTxHash: true,
+          approveReleaseTxHash: true,
+          releaseEvidences: {
+            select: {
+              id: true,
+              type: true,
+              fileUrl: true,
+              notes: true,
+              uploadedAt: true,
+              uploadedBy: true,
+            },
+            orderBy: {
+              uploadedAt: "asc",
+            },
+          },
         },
       },
       openedBy: {

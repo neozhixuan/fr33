@@ -149,6 +149,8 @@ export default async function JobPage({ params }: JobPageProps) {
               jobId={job.id}
               jobStatus={job.status}
               canOpenDispute={isEmployer || isAssignedWorker}
+              userId={userId}
+              walletAddress={wallet?.address ?? null}
               isAdmin={user.role === UserRole.ADMIN}
             />
           </aside>

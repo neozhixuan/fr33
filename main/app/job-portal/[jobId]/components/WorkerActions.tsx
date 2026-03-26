@@ -1,7 +1,12 @@
 "use client";
 
 import { Job, Wallet } from "@/generated/prisma-client";
-import { acceptJobAction, applyFundReleaseAction } from "@/lib/jobActions";
+import {
+  confirmAcceptJobAction,
+  confirmApplyFundReleaseAction,
+  prepareAcceptJobAction,
+  prepareApplyFundReleaseAction,
+} from "@/lib/jobActions";
 import ActionForm from "./ActionForm";
 import ActionStatusCard from "./ActionStatusCard";
 import { useActionState, useState } from "react";
@@ -10,6 +15,7 @@ import { useRouter } from "next/navigation";
 import ReleaseEvidenceImageInput from "./ReleaseEvidenceImageInput";
 import { uploadEvidenceAndGetUrl } from "@/lib/cloudinary";
 import { formatDateOnly } from "@/utils/constants";
+import { prepareAndSignSmartAccountTransaction } from "@/lib/preparedTransactionFlow";
 
 interface ApplyJobFormProps {
   job: Omit<Job, "amount"> & { amount: number };
@@ -55,10 +61,27 @@ export default function WorkerActions({
         return { success: false, errorMsg: "You are not allowed to accept a job." };
       }
 
-      const { success, errorMsg, txHash } = await acceptJobAction({
+      const signedTx = await prepareAndSignSmartAccountTransaction({
+        userId: workerId,
+        walletAddress: workerWallet.address,
+        prepare: () =>
+          prepareAcceptJobAction({
+            jobId: job.id,
+            workerId,
+          }),
+      });
+
+      if (!signedTx.success) {
+        return { success: false, errorMsg: signedTx.errorMsg || "Transaction failed" };
+      }
+
+      const { success, errorMsg, txHash } = await confirmAcceptJobAction({
         jobId: job.id,
         workerId,
+        txHash: signedTx.txHash,
+        userOpHash: signedTx.userOpHash,
       });
+
       if (success) {
         setAcceptState({
           acceptTxHash: txHash ?? "Error",
@@ -91,12 +114,31 @@ export default function WorkerActions({
         return { success: false, errorMsg: uploadErrorMsg };
       }
 
-      const { success, errorMsg, txHash } = await applyFundReleaseAction({
+      const signedTx = await prepareAndSignSmartAccountTransaction({
+        userId: workerId,
+        walletAddress: workerWallet.address,
+        prepare: () =>
+          prepareApplyFundReleaseAction({
+            jobId: job.id,
+            workerId,
+            evidenceText: releaseEvidenceText,
+            evidenceImageDataUrl: uploadedImageUrl,
+          }),
+      });
+
+      if (!signedTx.success) {
+        return { success: false, errorMsg: signedTx.errorMsg || "Transaction failed" };
+      }
+
+      const { success, errorMsg, txHash } = await confirmApplyFundReleaseAction({
         jobId: job.id,
         workerId,
         evidenceText: releaseEvidenceText,
         evidenceImageDataUrl: uploadedImageUrl,
+        txHash: signedTx.txHash,
+        userOpHash: signedTx.userOpHash,
       });
+
       if (success) {
         setApplyFundReleaseState({
           applyReleaseTxHash: txHash ?? "Error",

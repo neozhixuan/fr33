@@ -13,12 +13,6 @@ export default function Navbar() {
 
                 <div className="hidden items-center gap-10 md:flex">
                     <a
-                        href="#network"
-                        className="text-[10px] uppercase tracking-[0.25em] text-[#00f2ff]"
-                    >
-                        Network
-                    </a>
-                    <a
                         href="#protocol"
                         className="text-[10px] uppercase tracking-[0.25em] text-[#e1fdff]/60 transition-colors hover:text-[#e1fdff]"
                     >

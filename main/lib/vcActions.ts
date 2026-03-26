@@ -1,13 +1,15 @@
 "use server";
 
-import { IssueVCResponse } from "@/type/general";
+import {
+  IssueVCResponse,
+  PreparedSmartAccountTransactionResult,
+} from "@/type/general";
 import { getWalletByUserId } from "@/model/wallet";
 import { createVCMetadataForWallet, getValidVCForWallet } from "@/model/vc";
 import { updateUserOnboardingStage } from "@/model/user";
 import { OnboardingStage, Wallet } from "@/generated/prisma-client";
 import { getContract, getProvider } from "./ether";
 import { VC_REGISTRY_ABI } from "@/utils/constants";
-import { sendSmartAccountTransaction } from "./aaActions";
 
 const VC_REGISTRY_ADDRESS = process.env.NEXT_VC_REGISTRY_ADDRESS!;
 
@@ -25,20 +27,36 @@ function normaliseVcHash(vcHash: string): `0x${string}` {
   throw new Error("Invalid VC hash format. Expected a 32-byte hex string");
 }
 
-async function registerVcOnChain(
-  userId: number,
-  walletAddress: string,
-  vcResponse: IssueVCResponse,
-): Promise<string> {
+export async function prepareVcRegistrationAction(params: {
+  userId: number;
+  vcResponse: IssueVCResponse;
+}): Promise<
+  PreparedSmartAccountTransactionResult & { walletAddress?: string }
+> {
+  const { userId, vcResponse } = params;
   const registration = vcResponse.registrationAuthorisation;
   if (!registration) {
-    throw new Error("Missing VC registration authorisation payload");
+    return {
+      success: false,
+      errorMsg: "Missing VC registration authorisation payload",
+    };
+  }
+
+  const wallet = await getWalletByUserId(userId);
+  if (!wallet?.address) {
+    return {
+      success: false,
+      errorMsg: "Wallet not found for the user",
+    };
   }
 
   if (
-    registration.subjectAddress.toLowerCase() !== walletAddress.toLowerCase()
+    registration.subjectAddress.toLowerCase() !== wallet.address.toLowerCase()
   ) {
-    throw new Error("VC authorisation subject does not match wallet address");
+    return {
+      success: false,
+      errorMsg: "VC authorisation subject does not match wallet address",
+    };
   }
 
   const contract = await getContract(
@@ -51,7 +69,7 @@ async function registerVcOnChain(
     "registerCredentialWithAuthorisation",
     [
       normaliseVcHash(vcResponse.vcHash),
-      walletAddress,
+      wallet.address,
       BigInt(registration.expiresAt),
       BigInt(registration.nonce),
       BigInt(registration.deadline),
@@ -59,19 +77,16 @@ async function registerVcOnChain(
     ],
   );
 
-  const { txHash, success, errorMsg } = await sendSmartAccountTransaction(
-    userId,
-    VC_REGISTRY_ADDRESS,
-    callData,
-  );
-
-  if (!success || !txHash) {
-    throw new Error(
-      "VC on-chain registration failed: " + (errorMsg || "Unknown error"),
-    );
-  }
-
-  return txHash;
+  return {
+    success: true,
+    walletAddress: wallet.address,
+    txRequest: {
+      target: VC_REGISTRY_ADDRESS as `0x${string}`,
+      data: callData as `0x${string}`,
+      value: "0",
+      summary: "Register VC credential on-chain",
+    },
+  };
 }
 
 /**
@@ -80,10 +95,12 @@ async function registerVcOnChain(
  * @param vcResponse - The response from the VC issuance process
  * @returns
  */
-export async function processVcIssuance(
-  userId: number,
-  vcResponse: IssueVCResponse,
-) {
+export async function completeVcIssuanceAction(params: {
+  userId: number;
+  vcResponse: IssueVCResponse;
+  txHash: `0x${string}`;
+}) {
+  const { userId, vcResponse, txHash } = params;
   // Fetch user wallet
   const wallet = await getWalletByUserId(userId);
 
@@ -94,8 +111,6 @@ export async function processVcIssuance(
   if (!vcResponse.success) {
     throw new Error("VC issuance failed: " + vcResponse.errorMsg);
   }
-
-  const txHash = await registerVcOnChain(userId, wallet.address, vcResponse);
 
   // Store the issued VC JWT + on-chain registration transaction hash
   await createVCMetadataForWallet(vcResponse, wallet, txHash);

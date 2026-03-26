@@ -2,10 +2,13 @@
 
 import { JobStatus, Wallet } from "@/generated/prisma-client";
 import {
-  acceptFundReleaseAction,
+  confirmAcceptFundReleaseAction,
+  confirmFundEscrowAction,
+  confirmRefundPaymentAction,
   deleteJobAction,
-  fundEscrowAction,
-  refundPaymentAction,
+  prepareAcceptFundReleaseAction,
+  prepareFundEscrowAction,
+  prepareRefundPaymentAction,
 } from "@/lib/jobActions";
 import { JobForClientType, ReleaseEvidenceItem } from "@/type/general";
 import Button from "@/ui/Button";
@@ -15,6 +18,8 @@ import { useActionState, useState } from "react";
 import { useRouter } from "next/navigation";
 import { checkIsUserActionAllowed } from "@/lib/vcActions";
 import ReleaseEvidenceReview from "./ReleaseEvidenceReview";
+import { formatDateConsistent } from "@/utils/constants";
+import { prepareAndSignSmartAccountTransaction } from "@/lib/preparedTransactionFlow";
 
 
 interface FundJobFormProps {
@@ -41,38 +46,76 @@ export default function EmployerActions({
   releaseEvidences,
 }: FundJobFormProps) {
   const router = useRouter();
+  const [fundUiState, setFundUiState] = useState({
+    success: false,
+    errorMsg: "",
+  });
+  const [refundUiState, setRefundUiState] = useState({
+    success: false,
+    errorMsg: "",
+  });
 
   const [fundedState, setFundedState] = useState<FundedStateType>({
-    fundedAt: job.fundedAt ? new Date(job.fundedAt).toLocaleString() : "N/A",
+    fundedAt: job.fundedAt ? formatDateConsistent(job.fundedAt) : "N/A",
     fundedTxHash: job.fundedTxHash || "",
   });
 
   const [acceptFundReleaseState, setAcceptFundReleaseState] =
     useState<ReleaseStateType>({
       releasedAt: job.approveReleaseAt
-        ? new Date(job.approveReleaseAt).toLocaleString()
+        ? formatDateConsistent(job.approveReleaseAt)
         : "N/A",
       releaseTxHash: job.approveReleaseTxHash || "",
     });
 
-  const [state, fundAction, isFundEscrowPending] = useActionState(
+  const [, fundAction, isFundEscrowPending] = useActionState(
     async () => {
+      setFundUiState({ success: false, errorMsg: "" });
+      setRefundUiState({ success: false, errorMsg: "" });
+
       const isActionAllowed = await checkIsUserActionAllowed(wallet);
       if (!isActionAllowed) {
         alert("You are not compliant with the requirements to fund the escrow. Please ensure you have the necessary credentials and try again.");
-        return { success: false, errorMsg: "You are not allowed to fund the escrow." };
+        const next = { success: false, errorMsg: "You are not allowed to fund the escrow." };
+        setFundUiState(next);
+        return next;
       }
 
-      const { success, errorMsg, txHash } = await fundEscrowAction({
+      const signedTx = await prepareAndSignSmartAccountTransaction({
+        userId: employerId,
+        walletAddress: wallet.address,
+        prepare: () =>
+          prepareFundEscrowAction({
+            jobId: job.id,
+            employerId,
+          }),
+      });
+
+      if (!signedTx.success) {
+        const next = {
+          success: false,
+          errorMsg: signedTx.errorMsg || "Transaction failed",
+        };
+        setFundUiState(next);
+        return next;
+      }
+
+      const { success, errorMsg, txHash } = await confirmFundEscrowAction({
         jobId: job.id,
         employerId,
+        txHash: signedTx.txHash,
+        userOpHash: signedTx.userOpHash,
       });
+
       if (success) {
         setFundedState({
           fundedTxHash: txHash ?? "Error",
-          fundedAt: new Date().toLocaleString(),
+          fundedAt: formatDateConsistent(new Date()),
         });
+        setFundUiState({ success: true, errorMsg: "" });
         router.refresh();
+      } else {
+        setFundUiState({ success: false, errorMsg: errorMsg || "Funding failed" });
       }
 
       return { success, errorMsg };
@@ -89,14 +132,31 @@ export default function EmployerActions({
           return { success: false, errorMsg: "You are not allowed to approve fund release." };
         }
 
-        const { success, errorMsg, txHash } = await acceptFundReleaseAction({
+        const signedTx = await prepareAndSignSmartAccountTransaction({
+          userId: employerId,
+          walletAddress: wallet.address,
+          prepare: () =>
+            prepareAcceptFundReleaseAction({
+              jobId: job.id,
+              employerId,
+            }),
+        });
+
+        if (!signedTx.success) {
+          return { success: false, errorMsg: signedTx.errorMsg || "Transaction failed" };
+        }
+
+        const { success, errorMsg, txHash } = await confirmAcceptFundReleaseAction({
           jobId: job.id,
           employerId,
+          txHash: signedTx.txHash,
+          userOpHash: signedTx.userOpHash,
         });
+
         if (success) {
           setAcceptFundReleaseState({
             releaseTxHash: txHash ?? "N/A",
-            releasedAt: new Date().toLocaleString(),
+            releasedAt: formatDateConsistent(new Date()),
           });
           router.refresh();
         }
@@ -119,8 +179,8 @@ export default function EmployerActions({
         employerId,
       }); // Cannot pass callback from server to client component
       if (success) {
-        router.push("/job-portal?message=job-deleted");
-        router.refresh();
+        router.replace("/job-portal?message=job-deleted");
+        return { success: true, errorMsg: "" };
       }
 
       return { success, errorMsg };
@@ -128,17 +188,45 @@ export default function EmployerActions({
     { success: false, errorMsg: "" },
   );
 
-  const [refundState, refundAction, isRefundPending] = useActionState(
+  const [, refundAction, isRefundPending] = useActionState(
     async () => {
+      setRefundUiState({ success: false, errorMsg: "" });
+
       const isActionAllowed = await checkIsUserActionAllowed(wallet);
       if (!isActionAllowed) {
         alert("You are not authorized to refund the payment. Please ensure you have the necessary credentials.");
-        return { success: false, errorMsg: "You are not authorized to refund the payment." };
+        const next = {
+          success: false,
+          errorMsg: "You are not authorized to refund the payment.",
+        };
+        setRefundUiState(next);
+        return next;
       }
 
-      const { success, errorMsg } = await refundPaymentAction({
+      const signedTx = await prepareAndSignSmartAccountTransaction({
+        userId: employerId,
+        walletAddress: wallet.address,
+        prepare: () =>
+          prepareRefundPaymentAction({
+            jobId: job.id,
+            employerId,
+          }),
+      });
+
+      if (!signedTx.success) {
+        const next = {
+          success: false,
+          errorMsg: signedTx.errorMsg || "Transaction failed",
+        };
+        setRefundUiState(next);
+        return next;
+      }
+
+      const { success, errorMsg } = await confirmRefundPaymentAction({
         jobId: job.id,
         employerId,
+        txHash: signedTx.txHash,
+        userOpHash: signedTx.userOpHash,
       });
 
       if (success) {
@@ -146,7 +234,11 @@ export default function EmployerActions({
           fundedAt: "N/A",
           fundedTxHash: "",
         });
+        setFundUiState({ success: false, errorMsg: "" });
+        setRefundUiState({ success: true, errorMsg: "" });
         router.refresh();
+      } else {
+        setRefundUiState({ success: false, errorMsg: errorMsg || "Refund failed" });
       }
 
       return { success, errorMsg };
@@ -161,7 +253,7 @@ export default function EmployerActions({
         <ActionForm
           action={fundAction}
           isPending={isFundEscrowPending}
-          state={state}
+          state={fundUiState}
           buttonLabel="Fund Job"
           successMessage="Job funded successfully!"
           className="flex flex-col gap-3 w-full"
@@ -176,11 +268,11 @@ export default function EmployerActions({
             hashLabel="Transaction hash for funding action"
             hashValue={fundedState.fundedTxHash || "N/A"}
           />
-          {refundState.success && (
+          {refundUiState.success && (
             <p className="text-sm text-[#7cf39e]">Payment refunded successfully.</p>
           )}
-          {refundState.errorMsg && (
-            <p className="text-sm text-red-300">{refundState.errorMsg}</p>
+          {refundUiState.errorMsg && (
+            <p className="text-sm text-red-300">{refundUiState.errorMsg}</p>
           )}
           <form action={refundAction}>
             <Button className="w-full bg-red-500 px-4 py-3 text-xs font-bold uppercase tracking-[0.2em]">

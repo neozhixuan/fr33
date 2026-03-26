@@ -22,7 +22,7 @@ export default async function RegisterPage() {
                 },
                 {
                     label: "Portable",
-                    description: "On-Chain Reputation",
+                    description: "Smart Wallets",
                     labelColorClass: "text-[#dcb8ff]",
                 },
             ]}

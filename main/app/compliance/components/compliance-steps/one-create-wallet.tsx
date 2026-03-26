@@ -1,6 +1,7 @@
 "use client";
 
 import { createWallet } from "@/lib/aaActions";
+import { createEmbeddedWalletForUser } from "@/lib/embeddedWalletClient";
 import { useState } from "react";
 import StepSkeleton from "./step-skeleton";
 
@@ -16,7 +17,8 @@ export function CreateWalletCheckpoint({
   // Start the sequence that creates the wallet and updates the database
   const initiateCreateWallet = async () => {
     setIsLoading(true);
-    const res = await createWallet(userId);
+    const { address } = await createEmbeddedWalletForUser(userId);
+    const res = await createWallet(userId, address);
 
     if (!res.success) {
       console.error("Failed to create wallet:", res.errorMsg);

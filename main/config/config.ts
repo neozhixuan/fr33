@@ -15,6 +15,14 @@ export const initConfig = () => {
     throw new Error(
       "[createSmartAccount] Missing NEXT_ALCHEMY_GAS_POLICY_ID in environment variables",
     );
+  if (!process.env.NEXT_PUBLIC_ALCHEMY_API_KEY)
+    throw new Error(
+      "Missing NEXT_PUBLIC_ALCHEMY_API_KEY in environment variables",
+    );
+  if (!process.env.NEXT_PUBLIC_ALCHEMY_GAS_POLICY_ID)
+    throw new Error(
+      "Missing NEXT_PUBLIC_ALCHEMY_GAS_POLICY_ID in environment variables",
+    );
   if (!process.env.NEXT_VC_REGISTRY_ADDRESS)
     throw new Error("NEXT_VC_REGISTRY_ADDRESS environment variable not set");
 

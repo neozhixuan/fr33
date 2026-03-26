@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { DisputeEvidence } from "./DisputeEvidence";
 import { DisputeDescriptionBox } from "./DisputeDescriptionBox";
 import { AdminResolution } from "./AdminResolution";
+import { TransactionTrail } from "./TransactionTrail";
 
 const ADMIN_RESOLVABLE_STATUSES = new Set([
     "OPEN",
@@ -94,6 +95,26 @@ export default function DisputeDetail({ disputeId, role }: DisputeDetailProps) {
         }
     };
 
+    const txRows = dispute
+        ? [
+            { label: "Escrow funded", hash: dispute.job.fundedTxHash },
+            { label: "Worker accepted job", hash: dispute.job.acceptTxHash },
+            {
+                label: "Worker requested release",
+                hash: dispute.job.applyReleaseTxHash,
+            },
+            {
+                label: "Employer approved release",
+                hash: dispute.job.approveReleaseTxHash,
+            },
+            { label: "Dispute opened (freeze)", hash: dispute.freezeTxHash },
+            {
+                label: "Dispute resolution",
+                hash: dispute.resolutionTxHash,
+            },
+        ]
+        : [];
+
 
     return (
         <section className="space-y-6">
@@ -126,6 +147,56 @@ export default function DisputeDetail({ disputeId, role }: DisputeDetailProps) {
             {dispute ? (
                 <>
                     <DisputeDescriptionBox  {...dispute} />
+
+                    <TransactionTrail items={txRows} />
+
+                    <article className="rounded-xl border border-[#00f2ff]/15 bg-[#1c1b1c]/80 p-5">
+                        <h2 className="mb-3 text-sm font-bold uppercase tracking-[0.2em] text-[#00f2ff]">
+                            Worker Fund Release Evidence
+                        </h2>
+
+                        {dispute.job.releaseEvidences.length === 0 ? (
+                            <p className="text-sm text-[#b9cacb]">
+                                No fund release evidence submitted.
+                            </p>
+                        ) : (
+                            <div className="space-y-3">
+                                {dispute.job.releaseEvidences.map((item) => (
+                                    <div
+                                        key={item.id}
+                                        className="rounded-lg border border-white/10 bg-[#131314] p-3"
+                                    >
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <span className="text-[10px] uppercase tracking-[0.2em] text-[#00f2ff]">
+                                                {item.type}
+                                            </span>
+                                            <span className="text-xs text-[#b9cacb]">
+                                                {new Date(item.uploadedAt).toLocaleString()}
+                                            </span>
+                                        </div>
+                                        {item.notes ? (
+                                            <p className="mt-2 whitespace-pre-wrap text-sm text-[#e5e2e3]">
+                                                {item.notes}
+                                            </p>
+                                        ) : null}
+                                        <p className="mt-2 text-xs text-[#b9cacb]">
+                                            Uploaded by user #{item.uploadedBy}
+                                        </p>
+                                        {item.fileUrl ? (
+                                            <a
+                                                href={item.fileUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="mt-2 inline-flex break-all text-sm text-[#00f2ff] hover:underline"
+                                            >
+                                                View evidence attachment
+                                            </a>
+                                        ) : null}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </article>
 
                     <article className="rounded-xl border border-[#00f2ff]/15 bg-[#1c1b1c]/80 p-5">
                         <h2 className="mb-3 text-sm font-bold uppercase tracking-[0.2em] text-[#00f2ff]">Evidence</h2>

@@ -2,11 +2,15 @@
 
 import { UserInformation } from "../compliance-content";
 import { IssueVCResponse } from "@/type/general";
-import { processVcIssuance } from "@/lib/vcActions";
+import {
+  completeVcIssuanceAction,
+  prepareVcRegistrationAction,
+} from "@/lib/vcActions";
 import { getWalletAddress } from "@/lib/aaActions";
 import { convertBirthdateToAgeOver } from "@/utils/conv";
 import { useState } from "react";
 import StepSkeleton from "./step-skeleton";
+import { sendEmbeddedSmartAccountTransactionForUser } from "@/lib/embeddedWalletClient";
 
 export function RetrieveVCWithCredentialCheckpoint({
   authorizationCode,
@@ -55,7 +59,8 @@ export function RetrieveVCWithCredentialCheckpoint({
       exp: 1710000600,
     };
 
-    // Get wallet address from server action
+    // 2. Issue Verifiable Credential (VC) based on the user information
+    let data: IssueVCResponse;
     let walletAddress: string;
     try {
       walletAddress = await getWalletAddress(userId);
@@ -65,8 +70,6 @@ export function RetrieveVCWithCredentialCheckpoint({
       return;
     }
 
-    // 2. Issue Verifiable Credential (VC) based on the user information
-    let data: IssueVCResponse;
     try {
       const res = await fetch("http://localhost:3001/vc/issue", {
         method: "POST",
@@ -106,9 +109,41 @@ export function RetrieveVCWithCredentialCheckpoint({
       return;
     }
 
-    // 3. Store VC metadata and update onboarding stage via server action
+    // 3. Prepare on-chain VC registration
+    const prepared = await prepareVcRegistrationAction({
+      userId,
+      vcResponse: data,
+    });
+
+    if (!prepared.success || !prepared.txRequest || !prepared.walletAddress) {
+      alert(prepared.errorMsg || "Failed to prepare VC registration transaction");
+      setIsLoading(false);
+      return;
+    }
+
+    // 4. Require explicit embedded-wallet approval and submit user operation
+    const signedTx = await sendEmbeddedSmartAccountTransactionForUser({
+      userId,
+      expectedSmartAccountAddress: prepared.walletAddress,
+      target: prepared.txRequest.target,
+      data: prepared.txRequest.data,
+      value: prepared.txRequest.value,
+      summary: prepared.txRequest.summary,
+    });
+
+    if (!signedTx.success || !signedTx.txHash) {
+      alert(signedTx.errorMsg || "VC registration transaction failed");
+      setIsLoading(false);
+      return;
+    }
+
+    // 5. Store VC metadata and update onboarding stage via server action
     try {
-      await processVcIssuance(userId, data);
+      await completeVcIssuanceAction({
+        userId,
+        vcResponse: data,
+        txHash: signedTx.txHash,
+      });
     } catch (error) {
       alert("Failed to complete VC issuance: " + (error as Error).message);
       setIsLoading(false);

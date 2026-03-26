@@ -6,9 +6,7 @@ export type EscrowEventTypes =
   | "FUNDS_RELEASED"
   | "JOB_CANCELLED";
 
-type EscrowEventProperties = {
-  id: string;
-  jobId: string;
+type EscrowEventCommonProperties = {
   eventType: EscrowEventTypes;
   blockNumber: bigint;
   blockTimestamp: Date;
@@ -16,20 +14,24 @@ type EscrowEventProperties = {
 };
 
 export type SubgraphEscrowEvent = {
+  id: string;
+  jobId: string;
   wallet: string | null;
   counterparty: string | null;
   amount: string | null;
   transactionHash: string;
-} & EscrowEventProperties;
+} & EscrowEventCommonProperties;
 
 export type EscrowActivityRecord = {
+  id: number;
+  jobId: bigint;
   sourceEventId: string;
   walletAddress: string | null;
   counterpartyAddress: string | null;
   amountWei: string | null;
   txHash: string;
   createdAt: Date;
-} & EscrowEventProperties;
+} & EscrowEventCommonProperties;
 
 // Compliance types
 export type RuleEvaluationCandidate = {

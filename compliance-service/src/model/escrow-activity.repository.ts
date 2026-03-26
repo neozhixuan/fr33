@@ -4,7 +4,7 @@ import {
   EscrowEventTypes,
   SubgraphEscrowEvent,
 } from "../type/compliance.types";
-
+import { normaliseString } from "../utils/string";
 type Db = typeof prisma & Record<string, any>;
 const db = prisma as Db;
 

@@ -80,15 +80,6 @@ model EscrowActivity {
     @@schema("compliance_service")
 }
 
-model ComplianceIngestionCursor {
-    id                     Int       @id
-    lastProcessedTimestamp DateTime? @db.Timestamptz(6)
-    updatedAt              DateTime  @updatedAt @db.Timestamptz(6)
-
-    @@map("compliance_ingestion_cursor")
-    @@schema("compliance_service")
-}
-
 model ComplianceProfile {
     id              Int                     @id @default(autoincrement())
     walletAddress   String                  @unique

@@ -8,10 +8,10 @@ dataSources:
     network: polygon-amoy
     source:
       # Check /ignition/deployments/chain-80002/deployed_addresses.json
-      address: "0xDC0F09d74570eb51F27f8EbD3bB93aF8A81a6252"
+      address: "0x8D13814b9dEF6dD5d2FcB5E974EEc1bca33dc8B6"
       # Check /ignition/deployments/chain-80002/journal.jsonl
       abi: JobEscrow
-      startBlock: 35522685
+      startBlock: 35685362
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9

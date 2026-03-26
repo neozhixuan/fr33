@@ -1,13 +1,22 @@
 "use server";
 
-import { LocalAccountSigner, polygonAmoy } from "@alchemy/aa-core";
-import { createModularAccountAlchemyClient } from "@alchemy/aa-alchemy";
-import { generatePrivateKey } from "viem/accounts";
 import { createUserWalletRecord } from "@/model/user";
-import { SmartAccountDetails, ExecutionResult } from "@/type/general";
-import { decryptPrivateKey, encryptPrivateKey } from "./crypto";
+import { ExecutionResult, SmartAccountTransactionResult } from "@/type/general";
 import { getWalletByUserId } from "@/model/wallet";
-import { SmartAccountTransactionResult } from "@/type/general";
+import { auth } from "@/server/auth";
+import { stringToInt } from "@/utils/conv";
+
+function assertValidHexAddress(address: string) {
+  return /^0x[a-fA-F0-9]{40}$/.test(address);
+}
+
+async function assertSessionUserMatches(userId: number) {
+  const session = await auth();
+  const sessionUserId = session?.user?.id ? stringToInt(session.user.id) : null;
+  if (!sessionUserId || sessionUserId !== userId) {
+    throw new Error("Unauthorized wallet operation");
+  }
+}
 
 /**
  * Get the address of a user's wallet by their user ID
@@ -15,6 +24,7 @@ import { SmartAccountTransactionResult } from "@/type/general";
  * @returns The wallet address associated with the user
  */
 export async function getWalletAddress(userId: number): Promise<string> {
+  await assertSessionUserMatches(userId);
   const wallet = await getWalletByUserId(userId);
   if (!wallet || !wallet.address) {
     throw new Error("Wallet not found for the user");
@@ -23,36 +33,40 @@ export async function getWalletAddress(userId: number): Promise<string> {
 }
 
 /**
- * Creates a smart account for the user and updates the database accordingly.
+ * Persists embedded wallet metadata for the user.
+ * Private key material must remain client-managed and never be sent to backend.
  */
 export const createWallet = async (
   userId: number,
+  smartAccountAddress: string,
 ): Promise<ExecutionResult> => {
-  // 1. Get smart account address, fail fast if error
-  let smartAccountDetails: SmartAccountDetails | null = null;
-  try {
-    smartAccountDetails = await createSmartAccount();
-    if (!smartAccountDetails) {
-      throw new Error(
-        "[CreateWallet] Smart account creation returned null details",
-      );
-    }
-  } catch (error) {
-    console.log("[CreateWallet] Error creating smart account:", error);
+  await assertSessionUserMatches(userId);
+
+  if (!assertValidHexAddress(smartAccountAddress)) {
     return {
       success: false,
-      errorMsg: "[CreateWallet]Error creating smart account: " + error,
+      errorMsg: "Invalid wallet address format",
     };
   }
 
-  // 2. Create transaction to update user + wallet tables
   try {
-    await createUserWalletRecord(
-      userId,
-      smartAccountDetails.address,
-      smartAccountDetails.encryptedSignerKey,
-      smartAccountDetails.signerKeyIv,
-    );
+    const existing = await getWalletByUserId(userId);
+
+    if (existing?.address) {
+      if (
+        existing.address.toLowerCase() === smartAccountAddress.toLowerCase()
+      ) {
+        return { success: true };
+      }
+
+      return {
+        success: false,
+        errorMsg:
+          "A different wallet is already linked to this user. Contact support to rotate wallet metadata.",
+      };
+    }
+
+    await createUserWalletRecord(userId, smartAccountAddress);
   } catch (error) {
     console.log("[CreateWallet] Error updating user and wallet record:", error);
     return {
@@ -61,136 +75,33 @@ export const createWallet = async (
     };
   }
 
-  // 3. Return success
   return { success: true };
 };
 
 /**
- * Creates an ERC-4337 smart account for a user.
- * Returns both the smart account address and the owner's private key
+ * @deprecated Server-side signing is intentionally disabled.
+ * Use the client-side embedded wallet flow with explicit user approval.
  */
-export async function createSmartAccount(): Promise<SmartAccountDetails> {
-  // Generate a new EOA private key for this user
-  // TODO: Replace with deterministic key derivation from user credentials
-  const ownerPrivateKey = generatePrivateKey();
-
-  // Create a signer from the private key
-  const signer = LocalAccountSigner.privateKeyToAccountSigner(ownerPrivateKey);
-
-  // Create the Alchemy client with Modular Account and Gas Manager (paymaster)
-  const client = await createModularAccountAlchemyClient({
-    apiKey: process.env.NEXT_ALCHEMY_API_KEY!,
-    chain: polygonAmoy,
-    signer,
-    gasManagerConfig: {
-      policyId: process.env.NEXT_ALCHEMY_GAS_POLICY_ID!, // Smart account will be automatically deployed on first transaction
-    },
-  });
-  const smartAccountAddress = client.getAddress();
-
-  console.log(
-    "[createSmartAccount] Smart Account created:",
-    smartAccountAddress,
+export async function createSmartAccount() {
+  throw new Error(
+    "Server-side smart account creation is disabled. Use embedded wallet creation on the client.",
   );
-  console.log("[createSmartAccount] Owner EOA:", await signer.getAddress());
-
-  const { ciphertext, iv } = encryptPrivateKey(ownerPrivateKey);
-
-  return {
-    address: smartAccountAddress,
-    encryptedSignerKey: ciphertext,
-    signerKeyIv: iv,
-  };
 }
 
 /**
- * Get Smart Account Client for User
- * @param userId
- * @returns
- */
-async function getSmartAccountClient(userId: number) {
-  try {
-    // Get user's wallet from DB
-    const wallet = await getWalletByUserId(userId);
-
-    if (!wallet) {
-      throw new Error("No active wallet found for user");
-    }
-
-    // Recreate the signer by decrypting the private key
-    const signerPrivateKey = decryptPrivateKey(
-      wallet.encryptedSignerKey,
-      wallet.signerKeyIv,
-    );
-    const signer = LocalAccountSigner.privateKeyToAccountSigner(
-      signerPrivateKey as `0x${string}`,
-    );
-
-    // Generate the client that controls this smart wallet
-    const client = await createModularAccountAlchemyClient({
-      apiKey: process.env.NEXT_ALCHEMY_API_KEY!,
-      chain: polygonAmoy,
-      signer,
-      gasManagerConfig: {
-        policyId: process.env.NEXT_ALCHEMY_GAS_POLICY_ID!,
-      },
-    });
-
-    return { client, smartAccountAddress: wallet.address };
-  } catch (error) {
-    console.error("Error getting smart account client:", error);
-    throw new Error(
-      "Error getting smart account client: " + (error as Error).message,
-    );
-  }
-}
-
-/**
- * Send Transaction via Smart Account
- * @param userId
- * @param to
- * @param data
- * @param value
- * @returns
+ * @deprecated Server-side signing is intentionally disabled.
  */
 export async function sendSmartAccountTransaction(
-  userId: number,
-  to: string,
-  data: string,
-  value?: bigint,
+  _userId: number,
+  _to: string,
+  _data: string,
+  _value?: bigint,
 ): Promise<SmartAccountTransactionResult> {
-  const { client } = await getSmartAccountClient(userId);
-
-  try {
-    console.log("[sendSmartAccountTransaction] UserOp Details:", {
-      smartAccountAddress: client.getAddress(),
-      target: to,
-      dataLength: data.length,
-      value: value?.toString(),
-    });
-
-    // Send UserOperation via Alchemy
-    // - NOTE: If this is the first transaction of this account, the smart account will only be deployed here
-    const result = await client.sendUserOperation({
-      uo: {
-        target: to as `0x${string}`,
-        data: data as `0x${string}`,
-        value: value || BigInt(0),
-      },
-    });
-    // Wait for transaction to be mined
-    const txHash = await client.waitForUserOperationTransaction({
-      hash: result.hash,
-    });
-
-    return { txHash, userOpHash: result.hash, success: true };
-  } catch (error) {
-    console.error("Error with UserOperation transaction:", error);
-    return {
-      success: false,
-      errorMsg: (error as Error).message,
-      txHash: "" as `0x${string}`,
-      userOpHash: "" as `0x${string}`,
-    };
-  }
+  void _userId;
+  void _to;
+  void _data;
+  void _value;
+  throw new Error(
+    "Server-side user signing is disabled. Transactions must be submitted from client embedded wallet with explicit user approval.",
+  );
 }

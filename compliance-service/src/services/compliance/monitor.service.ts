@@ -1,16 +1,12 @@
 import { fetchEscrowEventsAfter } from "./subgraph.client";
 import { getComplianceConfig } from "../../config/compliance.config";
 
-// Models
-import {
-  getOrCreateCursor,
-  updateCursor,
-} from "../../model/compliance.repository";
 import { ingestEscrowEvent } from "../../model/escrow-activity.repository";
 import { processWalletRules } from "./rule-processor.service";
 
 let timer: NodeJS.Timeout | null = null;
 let polling = false;
+let inMemoryCursor: Date | null = null;
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 // Log verbosely if monitorVerbose is enabled, otherwise do nothing
@@ -41,7 +37,7 @@ function extractWalletCandidates(activity: {
 }
 
 // Poll the subgraph for new escrow events, ingest them, evaluate rules, and update compliance profiles and cases accordingly.
-// Uses a cursor to track the last processed event timestamp.
+// Uses an in-memory cursor that starts at process start time and resets on restart.
 export async function pollComplianceEventsOnce(): Promise<void> {
   if (polling) {
     return;
@@ -50,15 +46,19 @@ export async function pollComplianceEventsOnce(): Promise<void> {
   polling = true;
 
   try {
-    const lastProcessed = await getOrCreateCursor();
-    const fromTimestampSec = lastProcessed
-      ? Math.floor(lastProcessed.getTime() / 1000)
-      : 0;
+    if (!inMemoryCursor) {
+      inMemoryCursor = new Date();
+    }
+
+    // small overlap for safety against second-level timestamp boundaries.
+    // duplicates are ignored by sourceEventId uniqueness in ingestion.
+    const fromTimestampSec = Math.max(
+      0,
+      Math.floor(inMemoryCursor.getTime() / 1000) - 1,
+    );
 
     logVerbose(
-      `Polling subgraph from timestamp ${fromTimestampSec} (${
-        lastProcessed ? lastProcessed.toISOString() : "initial sync"
-      })`,
+      `Polling subgraph from timestamp ${fromTimestampSec} (${inMemoryCursor.toISOString()})`,
     );
 
     const events = await fetchEscrowEventsAfter(fromTimestampSec);
@@ -69,7 +69,7 @@ export async function pollComplianceEventsOnce(): Promise<void> {
       return;
     }
 
-    let newestTimestamp = lastProcessed || new Date(0);
+    let newestTimestamp = inMemoryCursor;
     let ingestedCount = 0;
 
     for (const event of events) {
@@ -92,9 +92,9 @@ export async function pollComplianceEventsOnce(): Promise<void> {
       }
     }
 
-    await updateCursor(newestTimestamp);
+    inMemoryCursor = newestTimestamp;
     logVerbose(
-      `Ingested ${ingestedCount} new event(s). Cursor moved to ${newestTimestamp.toISOString()}`,
+      `Ingested ${ingestedCount} new event(s). In-memory cursor moved to ${newestTimestamp.toISOString()}`,
     );
   } catch (error) {
     console.error(
@@ -130,6 +130,11 @@ export function startComplianceMonitor(): void {
     `[compliance-monitor] Starting with interval ${config.pollIntervalMs}ms`,
   );
 
+  inMemoryCursor = new Date();
+  logVerbose(
+    `Initial in-memory cursor set to ${inMemoryCursor.toISOString()} (process start)`,
+  );
+
   pollComplianceEventsOnce();
 
   timer = setInterval(() => {
@@ -143,4 +148,6 @@ export function stopComplianceMonitor(): void {
     clearInterval(timer);
     timer = null;
   }
+
+  inMemoryCursor = null;
 }

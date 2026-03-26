@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { authenticateAction } from "@/lib/authActions";
 import { useSearchParams } from "next/navigation";
-import { getLoginErrorMsg } from "@/utils/errors";
+import { ERROR_TYPE_MAP, getLoginErrorMsg } from "@/utils/errors";
 
 export function LoginForm() {
   const redirectURL = "/job-portal";
@@ -23,7 +23,7 @@ export function LoginForm() {
   return (
     <form action={loginAction} className="space-y-5">
       {authorisationErrorMessage && (
-        <div role="alert" className="rounded border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-300">
+        <div role="alert" className={`${authorisationErrorMessage === ERROR_TYPE_MAP.NEW_USER ? "border-red-400/30 bg-red-500/10 text-red-300" : "border-green-400/30 bg-green-500/10 text-green-300"} rounded border p-3 text-sm `}>
           {authorisationErrorMessage}
         </div>
       )}

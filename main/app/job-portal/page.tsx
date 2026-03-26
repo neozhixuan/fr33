@@ -5,6 +5,7 @@ import { getJobListingsAction } from "@/lib/jobActions";
 import { JobListings } from "./components";
 import NextLink from "next/link";
 import { getUserWalletValueString } from "@/lib/ether";
+import Footer from "../components/Footer";
 
 /**
  * Job Portal Page.
@@ -153,35 +154,7 @@ export default async function JobPortal({
         </main>
       </div>
 
-      <footer className="border-t border-white/10 bg-[#0e0e0f]">
-        <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-10 px-8 py-12 md:grid-cols-4">
-          <div>
-            <span className="text-xl font-black text-[#e1fdff]">fr33</span>
-            <p className="mt-4 text-[10px] uppercase tracking-[0.2em] text-[#e5e2e3]/40">
-              © 2026 fr33 protocol.
-              <br />
-              secure. decentralized.
-            </p>
-          </div>
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-[#00f2ff]">Protocol</h4>
-            <p className="text-xs uppercase tracking-[0.2em] text-[#e5e2e3]/50">Smart Contracts</p>
-            <p className="text-xs uppercase tracking-[0.2em] text-[#e5e2e3]/50">Privacy Node</p>
-          </div>
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-[#00f2ff]">Support</h4>
-            <p className="text-xs uppercase tracking-[0.2em] text-[#e5e2e3]/50">Help Center</p>
-            <p className="text-xs uppercase tracking-[0.2em] text-[#e5e2e3]/50">Trust & Safety</p>
-          </div>
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-[#00f2ff]">Network</h4>
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-[#7cf39e] shadow-[0_0_8px_#7cf39e]" />
-              <span className="text-[10px] uppercase tracking-[0.2em] text-[#e5e2e3]">Polygon Mainnet</span>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

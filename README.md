@@ -266,12 +266,14 @@ npm install
    - `NEXT_VC_REGISTRY_ADDRESS`
    - Alchemy values (`NEXT_ALCHEMY_API_KEY`, `NEXT_ALCHEMY_GAS_POLICY_ID`)
 
-   Optional (worker evidence image upload):
+- Embedded wallet public values (`NEXT_PUBLIC_ALCHEMY_API_KEY`, `NEXT_PUBLIC_ALCHEMY_GAS_POLICY_ID`)
 
-   - `CLOUDINARY_CLOUD_NAME`
-   - `CLOUDINARY_API_KEY`
-   - `CLOUDINARY_API_SECRET`
-   - `CLOUDINARY_EVIDENCE_FOLDER`
+Optional (worker evidence image upload):
+
+- `CLOUDINARY_CLOUD_NAME`
+- `CLOUDINARY_API_KEY`
+- `CLOUDINARY_API_SECRET`
+- `CLOUDINARY_EVIDENCE_FOLDER`
 
 #### Compliance service
 
@@ -304,6 +306,7 @@ Then copy deployed addresses from [smart-contracts/ignition/deployments/chain-80
 - `NEXT_ESCROW_CONTRACT_ADDRESS` (main)
 - `NEXT_VC_REGISTRY_ADDRESS` (main)
 - `VC_REGISTRY_ADDRESS` (compliance-service)
+- `subgraph.yaml` (compliance-service)
 
 ### 4) Set up Prisma schemas (both services)
 

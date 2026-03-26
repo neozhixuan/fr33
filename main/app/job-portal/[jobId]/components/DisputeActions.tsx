@@ -4,6 +4,7 @@ import { JobStatus } from "@/generated/prisma-client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { prepareAndSignSmartAccountTransaction } from "@/lib/preparedTransactionFlow";
 
 type DisputeSummary = {
     id: number;
@@ -15,6 +16,8 @@ type DisputeActionsProps = {
     jobId: number;
     jobStatus: JobStatus;
     canOpenDispute: boolean;
+    userId: number;
+    walletAddress?: string | null;
     isAdmin?: boolean;
 };
 
@@ -35,6 +38,8 @@ export default function DisputeActions({
     jobId,
     jobStatus,
     canOpenDispute,
+    userId,
+    walletAddress,
     isAdmin = false,
 }: DisputeActionsProps) {
     const router = useRouter();
@@ -85,22 +90,69 @@ export default function DisputeActions({
     }, [jobId, isAdmin]);
 
     const createDispute = async () => {
+        if (!walletAddress) {
+            setError("No wallet linked for this user");
+            return;
+        }
+
         setSubmitting(true);
         setError("");
         try {
-            const res = await fetch("/api/disputes", {
+            const signedTx = await prepareAndSignSmartAccountTransaction({
+                userId,
+                walletAddress,
+                prepare: async () => {
+                    const prepareRes = await fetch("/api/disputes", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            mode: "prepare",
+                            jobId,
+                            reason: reason.trim() || undefined,
+                        }),
+                    });
+
+                    const prepareData = await prepareRes.json();
+                    if (!prepareRes.ok) {
+                        return {
+                            success: false,
+                            errorMsg:
+                                prepareData?.error ||
+                                prepareData?.errorMsg ||
+                                "Failed to prepare dispute transaction",
+                        };
+                    }
+
+                    return {
+                        success: Boolean(prepareData?.success),
+                        errorMsg: prepareData?.errorMsg,
+                        txRequest: prepareData?.txRequest,
+                    };
+                },
+            });
+
+            if (!signedTx.success) {
+                throw new Error(signedTx.errorMsg || "Failed to submit dispute transaction");
+            }
+
+            const confirmRes = await fetch("/api/disputes", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
+                    mode: "confirm",
                     jobId,
                     reason: reason.trim() || undefined,
+                    txHash: signedTx.txHash,
+                    userOpHash: signedTx.userOpHash,
                 }),
             });
 
-            const data = await res.json();
-            if (!res.ok || !data?.success) {
+            const data = await confirmRes.json();
+            if (!confirmRes.ok || !data?.success) {
                 throw new Error(data?.error || "Failed to create dispute");
             }
 

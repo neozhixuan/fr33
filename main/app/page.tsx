@@ -31,7 +31,7 @@ export default function Home() {
             </h1>
 
             <h2 className="mx-auto mb-5 max-w-4xl text-2xl font-bold leading-tight tracking-tight text-[#e5e2e3] sm:text-3xl md:text-5xl">
-              Decentralized Work Force.
+              Hybrid Work Force.
               <br />
               <span className="bg-gradient-to-r from-[#00f2ff] via-[#e1fdff] to-[#dcb8ff] bg-clip-text text-transparent">
                 Cryptographic Accountability.
@@ -39,9 +39,8 @@ export default function Home() {
             </h2>
 
             <p className="mx-auto mb-8 max-w-2xl text-sm font-light leading-relaxed tracking-wide text-[#b9cacb] md:text-lg">
-              The high-performance protocol for the global freelance economy.
-              Smart-contract escrow, merit-based reputation, and zero-fee
-              settlement.
+              The operational framework for the global freelance economy.
+              Smart-contract escrow, zero-fee settlement, compliant user base.
             </p>
 
             <div className="flex flex-col items-center justify-center gap-3 sm:gap-4 md:flex-row md:gap-6">
@@ -50,12 +49,6 @@ export default function Home() {
                 className="w-full border border-transparent bg-[#00f2ff] px-7 py-3 text-[10px] font-bold uppercase tracking-[0.22em] text-[#00363a] shadow-[0_0_24px_rgba(0,242,255,0.2)] transition-transform hover:scale-105 sm:w-auto"
               >
                 Enter Job Portal
-              </NextLink>
-              <NextLink
-                href="/compliance"
-                className="w-full border border-white/15 px-7 py-3 text-[10px] font-bold uppercase tracking-[0.22em] text-[#e1fdff] transition-colors hover:bg-white/5 sm:w-auto"
-              >
-                Explore Compliance
               </NextLink>
             </div>
           </div>
@@ -79,18 +72,18 @@ export default function Home() {
                 Smart Escrow
               </h3>
               <p className="text-sm leading-relaxed text-[#b9cacb] md:text-base">
-                Self-executing contracts secure project funds. Capital is
+                Self-executing contracts secure project funds. Funds are
                 released programmatically upon milestone verification.
               </p>
             </article>
 
             <article className="bg-[#0a0a0b] p-10 transition-colors duration-500 hover:bg-[#7701d0]/10 md:p-14">
               <h3 className="mb-4 text-xl font-bold uppercase tracking-[0.15em] text-[#dcb8ff] md:text-2xl">
-                On-Chain Trust
+                Verifiable Users
               </h3>
               <p className="text-sm leading-relaxed text-[#b9cacb] md:text-base">
-                Immutable reputation scores built on verified work history with
-                credentials that travel across the entire Web3 ecosystem.
+                User base is verified through KYC and prompted to create a fresh smart wallet,
+                ensuring accountability and compliance while maintaining privacy.
               </p>
             </article>
 
@@ -100,33 +93,9 @@ export default function Home() {
               </h3>
               <p className="text-sm leading-relaxed text-[#b9cacb] md:text-base">
                 Neutral, fast, and secure dispute management through
-                decentralized arbitration for a truly borderless economy.
+                smart-contract triggered arbitration.
               </p>
             </article>
-          </div>
-        </section>
-
-        {/* Network Section */}
-        <section
-          id="network"
-          className="border-y border-white/10 bg-[#0e0e0f] px-8 py-16 md:py-24"
-        >
-          <div className="mx-auto flex max-w-7xl flex-wrap justify-between gap-10">
-            {[
-              ["$142M+", "Volume Secured"],
-              ["28.4K", "Active Nodes"],
-              ["0.0%", "Platform Fees"],
-              ["12ms", "Settlement Time"],
-            ].map(([value, label]) => (
-              <div key={label} className="flex min-w-[180px] flex-col">
-                <span className="mb-2 text-3xl font-bold text-[#e5e2e3] md:text-4xl">
-                  {value}
-                </span>
-                <span className="text-[10px] uppercase tracking-[0.3em] text-[#00f2ff]">
-                  {label}
-                </span>
-              </div>
-            ))}
           </div>
         </section>
 

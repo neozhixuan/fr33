@@ -32,10 +32,18 @@ export type VCData = {
 export type IssueVCResponse = VCData & ExecutionResult;
 
 // Smart Account Details
-export type SmartAccountDetails = Pick<
-  Wallet,
-  "address" | "encryptedSignerKey" | "signerKeyIv"
->;
+export type SmartAccountDetails = Pick<Wallet, "address">;
+
+export type PreparedSmartAccountTransaction = {
+  target: `0x${string}`;
+  data: `0x${string}`;
+  value: string; // wei (base-10 string)
+  summary: string;
+};
+
+export type PreparedSmartAccountTransactionResult = ExecutionResult & {
+  txRequest?: PreparedSmartAccountTransaction;
+};
 
 export type SmartAccountTransactionResult = {
   txHash: `0x${string}`;

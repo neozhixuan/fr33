@@ -16,9 +16,10 @@ import {
   DISPUTE_OUTCOME_TO_CONTRACT_ENUM,
   getFundReleaseTimeoutSeconds,
 } from "@/utils/disputeUtils";
-import { executeJobTransaction } from "@/utils/aaUtils";
+import { buildEscrowTransactionRequest } from "@/utils/aaUtils";
 import { executeAdminEscrowTransaction } from "@/lib/escrowActions";
 import { prisma } from "@/lib/db";
+import { PreparedSmartAccountTransactionResult } from "@/type/general";
 import {
   getDisputeByIdBasic,
   getDisputeDetails,
@@ -76,17 +77,11 @@ export async function listOpenDisputesAdminAction(adminUserId: number) {
   return listOpenDisputes();
 }
 
-/**
- * Create a dispute for a job, which involves freezing the escrow on-chain and creating a dispute record in the database.
- * @param params - An object containing the jobId, userId of the person initiating the dispute, and an optional reason for the dispute.
- * @returns An object indicating success, the dispute details, and transaction hashes if the on-chain operation was successful.
- */
-export async function createDisputeAction(params: {
+async function assertDisputeCreationAllowed(params: {
   jobId: number;
   userId: number;
-  reason?: string;
 }) {
-  const { jobId, userId, reason } = params;
+  const { jobId, userId } = params;
 
   const [job, userContext] = await Promise.all([
     getJobDetails(jobId),
@@ -128,31 +123,61 @@ export async function createDisputeAction(params: {
     throw new Error("An active dispute already exists for this job");
   }
 
-  const txResult = await executeJobTransaction({
-    userId,
+  return { job };
+}
+
+/**
+ * Prepare the on-chain dispute-freeze transaction.
+ * Transaction must be signed client-side by the user's embedded wallet.
+ */
+export async function prepareCreateDisputeAction(params: {
+  jobId: number;
+  userId: number;
+}): Promise<PreparedSmartAccountTransactionResult> {
+  const { jobId, userId } = params;
+
+  await assertDisputeCreationAllowed({ jobId, userId });
+
+  const txRequest = await buildEscrowTransactionRequest({
     functionName: "openDispute",
     functionArgs: [jobId],
-    onSuccess: async (txHash) => {
-      await createDisputeAfterFreeze({
-        jobId,
-        openedByUserId: userId,
-        freezeTxHash: txHash,
-        reason,
-      });
-    },
+    summary: `Open dispute and freeze escrow for job #${jobId}`,
   });
 
-  if (!txResult.success) {
-    throw new Error(txResult.errorMsg || "Failed to freeze escrow on-chain");
-  }
+  return {
+    success: true,
+    txRequest,
+  };
+}
+
+/**
+ * Finalize dispute creation after successful on-chain freeze.
+ */
+export async function confirmCreateDisputeAction(params: {
+  jobId: number;
+  userId: number;
+  reason?: string;
+  txHash: `0x${string}`;
+  userOpHash: `0x${string}`;
+}) {
+  const { jobId, userId, reason, txHash, userOpHash } = params;
+
+  await assertDisputeCreationAllowed({ jobId, userId });
+
+  await createDisputeAfterFreeze({
+    jobId,
+    openedByUserId: userId,
+    freezeTxHash: txHash,
+    reason,
+  });
 
   const dispute = await getDisputeByJobIdAction(jobId);
 
   return {
     success: true,
     dispute,
-    txHash: txResult.txHash,
-    userOpHash: txResult.userOpHash,
+    txHash,
+    userOpHash,
   };
 }
 

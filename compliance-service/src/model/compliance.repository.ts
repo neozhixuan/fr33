@@ -2,35 +2,6 @@ import { prisma } from "../lib/db";
 type Db = typeof prisma & Record<string, any>;
 const db = prisma as Db;
 
-const INGESTION_CURSOR_ID = 1;
-
-// REPO: Fetch a cursor, else create it
-export async function getOrCreateCursor(): Promise<Date | null> {
-  const cursor = await db.complianceIngestionCursor.upsert({
-    where: { id: INGESTION_CURSOR_ID },
-    create: { id: INGESTION_CURSOR_ID, lastProcessedTimestamp: null },
-    update: {},
-  });
-
-  return cursor.lastProcessedTimestamp as Date | null;
-}
-
-// REPO: Update cursor timestamp
-export async function updateCursor(
-  lastProcessedTimestamp: Date,
-): Promise<void> {
-  await db.complianceIngestionCursor.upsert({
-    where: { id: INGESTION_CURSOR_ID },
-    create: {
-      id: INGESTION_CURSOR_ID,
-      lastProcessedTimestamp,
-    },
-    update: {
-      lastProcessedTimestamp,
-    },
-  });
-}
-
 // REPO: Get the compliance profile of a wallet, creating it if it doesn't exist
 export async function getOrCreateProfile(walletAddress: string): Promise<any> {
   return db.complianceProfile.upsert({

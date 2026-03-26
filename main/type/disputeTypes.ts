@@ -10,10 +10,21 @@ type DisputeEvidence = {
   createdAt: string;
 };
 
+type ReleaseEvidence = {
+  id: number;
+  type: string;
+  fileUrl: string;
+  notes: string | null;
+  uploadedAt: string;
+  uploadedBy: number;
+};
+
 export type DisputeDetailData = {
   id: number;
   jobId: number;
   status: string;
+  freezeTxHash: string | null;
+  resolutionTxHash: string | null;
   decision: string | null;
   decisionReason: string | null;
   workerShareBps: number | null;
@@ -25,6 +36,11 @@ export type DisputeDetailData = {
     employerId: number;
     workerWallet: string | null;
     status: string;
+    fundedTxHash: string | null;
+    acceptTxHash: string | null;
+    applyReleaseTxHash: string | null;
+    approveReleaseTxHash: string | null;
+    releaseEvidences: ReleaseEvidence[];
   };
   evidences: DisputeEvidence[];
 };
@@ -88,6 +104,18 @@ export type DisputeWithRelations = DbDispute & {
     title: string;
     status: JobStatus;
     applyReleaseAt: Date | null;
+    fundedTxHash: string | null;
+    acceptTxHash: string | null;
+    applyReleaseTxHash: string | null;
+    approveReleaseTxHash: string | null;
+    releaseEvidences: {
+      id: number;
+      type: string;
+      fileUrl: string;
+      notes: string | null;
+      uploadedAt: Date;
+      uploadedBy: number;
+    }[];
   };
   openedBy: { id: number; email: string; role: UserRole };
   decidedBy: { id: number; email: string; role: UserRole } | null;
