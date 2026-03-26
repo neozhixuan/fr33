@@ -46,7 +46,7 @@ erDiagram
 
     VCMetadata {
         int id PK
-        int walletId FK UK
+        int walletId FK
         string vcHash
         string txHash
         enum status
