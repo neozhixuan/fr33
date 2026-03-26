@@ -109,4 +109,48 @@ describe("JobEscrow", function () {
     expect(completedJob.state).to.equal(3); // COMPLETED
     expect(completedJob.amount).to.equal(0);
   });
+
+  it("only admin can resolve disputes", async function () {
+    const { escrow, employer, worker } = await deployFixture();
+
+    const jobId = 4;
+    const amount = ethers.parseEther("0.1");
+
+    await escrow.connect(employer).fundJob(jobId, { value: amount });
+    await escrow.connect(worker).acceptJob(jobId);
+    await escrow.connect(worker).openDispute(jobId);
+
+    await expect(
+      escrow.connect(worker).resolveDispute(jobId, 0, 0, "not allowed"),
+    ).to.be.revertedWith("Not admin");
+  });
+
+  it("employer can cancel before worker accepts", async function () {
+    const { escrow, employer } = await deployFixture();
+
+    const jobId = 5;
+    const amount = ethers.parseEther("0.05");
+
+    await escrow.connect(employer).fundJob(jobId, { value: amount });
+    await escrow.connect(employer).cancelJob(jobId);
+
+    const cancelledJob = await escrow.getJob(jobId);
+    expect(cancelledJob.state).to.equal(5); // CANCELLED
+    expect(cancelledJob.amount).to.equal(0);
+  });
+
+  it("does not auto-release before timeout is reached", async function () {
+    const { escrow, employer, worker } = await deployFixture();
+
+    const jobId = 6;
+    const amount = ethers.parseEther("0.08");
+
+    await escrow.connect(employer).fundJob(jobId, { value: amount });
+    await escrow.connect(worker).acceptJob(jobId);
+    await escrow.connect(worker).requestRelease(jobId);
+
+    await expect(
+      escrow.connect(worker).autoReleaseAfterTimeout(jobId, 3600),
+    ).to.be.revertedWith("Timeout not reached");
+  });
 });

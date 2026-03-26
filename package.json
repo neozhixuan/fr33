@@ -13,7 +13,7 @@
     "build:smart-contracts": "cd smart-contracts && npm run build",
     "build:main": "cd main && npm i && npm run build",
     "build:compliance": "cd compliance-service && npm i && npm run build",
-    "test": "npm run test:smart-contracts && npm run test:main && npm run test:compliance-service",
+    "test": "npm run test:smart-contracts && npm run test:main && npm run test:compliance",
     "test:smart-contracts": "cd smart-contracts && npm run test",
     "test:main": "cd main && npm run test",
     "test:compliance": "cd compliance-service && npm run test",
