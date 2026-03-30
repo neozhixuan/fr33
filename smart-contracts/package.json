@@ -6,6 +6,7 @@
     "build": "npx hardhat compile && node scripts/export-abis.mjs",
     "export-abis": "node scripts/export-abis.mjs",
     "test": "npx hardhat test",
+    "analyze:onchain-cost": "npx hardhat run scripts/onchain-cost-analysis.ts --network hardhatMainnet",
     "dev": "npx hardhat node",
     "deploy:local": "npx hardhat ignition deploy ignition/modules/JobEscrow.ts --network localhost",
     "deploy:polygon": "npx hardhat ignition deploy ignition/modules/JobEscrow.ts --network polygon",
