@@ -6,6 +6,8 @@ A compliance-aware freelance escrow protocol (Singapore-focused demonstrator) bu
 - `compliance-service`: Express + Prisma microservice (`issuer_service`, `compliance_service`)
 - `smart-contracts`: Hardhat contracts (`JobEscrow`, `VCRegistry`) + subgraph package
 
+Demonstration video: https://youtu.be/f3hRg-i7H3o
+
 ## Abstract
 
 Regulated service platforms like Upwork liaise freelancers with employers. These platforms require strong identity verification and transaction monitoring, but use an opaque and custodial escrow to orchestrate payments to users. This project proposes and implements “FR33”, a hybrid Web2-Web3 architecture for conditional escrow payments that preserves on-chain auditability, while enforcing identity-based access for critical payment logic. It combines various components: (i) off-chain identity verification that uses existing identity infrastructure, (ii) an on-chain registry that manages credential-based access control, (iii) a state-machine-based smart contract that enforces escrow payments, and (iv) an off-chain event indexing and rule-based monitoring layer that intervenes in suspicious transactions. These components are demonstrated via a prototype freelance marketplace that aligns with Singapore’s regulatory context. The prototype is evaluated via its functional correctness, where 11 unit and cross-layer test suites cover these workflows. At the same time, its cost of operation is evaluated by benchmarking gas usage across 30 executions of escrow operations on the Polygon Amoy testnet. Finally, the operational trade-offs introduced by the hybrid architecture were evaluated qualitatively against fully on-chain escrows. Experimental results on the network show that the escrow lifecycle incurs an average on-chain cost between $0.006 and $0.013 USD, which is more efficient and consistent than fees charged by centralised platforms for settling payments. These results illustrate the feasibility of the design for a proof-of-concept (PoC) system, by depicting the tradeoffs between performance and trust assumptions.
@@ -423,14 +425,14 @@ Cross-layer tests ensure that integration is consistent across multiple services
 
 ### On-Chain Cost Analysis
 
-| Action            | Avg. Gas Fee (wei) | P95 Gas Fee (wei) | Translated Avg. Fee (USD) | Translated P95 Fee (USD) |
-|:------------------|:-------------------|:------------------|:--------------------------|:--------------------------|
-| Escrow Creation   | 107,561            | 106,991           | \$0.00430244              | \$0.00427964              |
-| Fund Release      | 50,620             | 50,620            | \$0.00202480              | \$0.00202480              |
-| Open Dispute      | 59,497             | 59,497            | \$0.00237988              | \$0.00237988              |
-| Resolve Dispute   | 150,197            | 150,197           | \$0.00600788              | \$0.00600788              |
+| Action          | Avg. Gas Fee (wei) | P95 Gas Fee (wei) | Translated Avg. Fee (USD) | Translated P95 Fee (USD) |
+| :-------------- | :----------------- | :---------------- | :------------------------ | :----------------------- |
+| Escrow Creation | 107,561            | 106,991           | \$0.00430244              | \$0.00427964             |
+| Fund Release    | 50,620             | 50,620            | \$0.00202480              | \$0.00202480             |
+| Open Dispute    | 59,497             | 59,497            | \$0.00237988              | \$0.00237988             |
+| Resolve Dispute | 150,197            | 150,197           | \$0.00600788              | \$0.00600788             |
 
-The sum of gas fees in a full workflow, depending on the presence of a dispute, would cost between $0.006 and $0.013 USD, assuming a conversion rate of 1 POL to $0.80 USD. Given that gas costs are handled by the paymaster, $1 USD could sponsor roughly 160 lifecycles of escrow operations, which is feasible in the PoC scope. As the job scales up to $100 in value, Upwork would charge a scaled up $15 in service fees, while FR33’s on-chain cost would remain constant as gas costs are independent of escrow amount. 
+The sum of gas fees in a full workflow, depending on the presence of a dispute, would cost between $0.006 and $0.013 USD, assuming a conversion rate of 1 POL to $0.80 USD. Given that gas costs are handled by the paymaster, $1 USD could sponsor roughly 160 lifecycles of escrow operations, which is feasible in the PoC scope. As the job scales up to $100 in value, Upwork would charge a scaled up $15 in service fees, while FR33’s on-chain cost would remain constant as gas costs are independent of escrow amount.
 
 ## Notes
 
