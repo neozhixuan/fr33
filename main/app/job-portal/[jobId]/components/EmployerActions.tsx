@@ -45,6 +45,8 @@ export default function EmployerActions({
   wallet,
   releaseEvidences,
 }: FundJobFormProps) {
+  const canRefundFundedPayment = job.status === JobStatus.FUNDED;
+
   const router = useRouter();
   const [fundUiState, setFundUiState] = useState({
     success: false,
@@ -268,17 +270,21 @@ export default function EmployerActions({
             hashLabel="Transaction hash for funding action"
             hashValue={fundedState.fundedTxHash || "N/A"}
           />
-          {refundUiState.success && (
-            <p className="text-sm text-[#7cf39e]">Payment refunded successfully.</p>
+          {canRefundFundedPayment && (
+            <>
+              {refundUiState.success && (
+                <p className="text-sm text-[#7cf39e]">Payment refunded successfully.</p>
+              )}
+              {refundUiState.errorMsg && (
+                <p className="text-sm text-red-300">{refundUiState.errorMsg}</p>
+              )}
+              <form action={refundAction}>
+                <Button className="w-full bg-red-500 px-4 py-3 text-xs font-bold uppercase tracking-[0.2em]">
+                  {isRefundPending ? "Refunding..." : "Refund Funded Payment"}
+                </Button>
+              </form>
+            </>
           )}
-          {refundUiState.errorMsg && (
-            <p className="text-sm text-red-300">{refundUiState.errorMsg}</p>
-          )}
-          <form action={refundAction}>
-            <Button className="w-full bg-red-500 px-4 py-3 text-xs font-bold uppercase tracking-[0.2em]">
-              {isRefundPending ? "Refunding..." : "Refund Funded Payment"}
-            </Button>
-          </form>
         </>
       )}
       {job.status === JobStatus.PENDING_APPROVAL &&
